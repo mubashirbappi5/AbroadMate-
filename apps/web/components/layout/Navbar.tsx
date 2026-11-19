@@ -17,6 +17,11 @@ import {
   Languages,
   ShieldCheck,
   User,
+  Building2,
+  Workflow,
+  LogIn,
+  Info,
+  PhoneCall,
 } from "lucide-react";
 
 export function Navbar() {
@@ -24,14 +29,14 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  const navLinks = [
+  const publicNavLinks = [
+    { href: "/how-it-works", label: "কিভাবে কাজ করে", icon: Workflow },
+    { href: "/universities", label: "বিশ্ববিদ্যালয়সমূহ", icon: Building2 },
     { href: "/explore", label: t.nav.countries, icon: Globe2 },
-    { href: "/eligibility", label: t.nav.eligibility, icon: FileCheck2 },
     { href: "/scholarships", label: t.nav.scholarships, icon: GraduationCap },
-    { href: "/visa-guides", label: t.nav.visaGuide, icon: MapPin },
     { href: "/calculator", label: t.nav.costCalculator, icon: Calculator },
-    { href: "/roadmap", label: t.nav.roadmap, icon: Compass },
-    { href: "/ai-assistant", label: t.nav.assistant, icon: Bot },
+    { href: "/about", label: "আমাদের কথা", icon: Info },
+    { href: "/contact", label: "যোগাযোগ", icon: PhoneCall },
   ];
 
   return (
@@ -45,8 +50,8 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-700 flex items-center justify-center text-white shadow-sm shadow-brand-700/20">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-brand-700 flex items-center justify-center text-white shadow-xs shadow-brand-700/20">
               <GraduationCap className="w-6 h-6" />
             </div>
             <div>
@@ -60,21 +65,21 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center space-x-1">
-            {navLinks.map((link) => {
+          <nav className="hidden xl:flex items-center space-x-1">
+            {publicNavLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname.startsWith(link.href);
+              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-xs lg:text-sm font-medium rounded-lg transition-colors ${
                     isActive
                       ? "text-brand-800 bg-brand-50 font-semibold"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                   }`}
                 >
-                  <Icon className="w-4 h-4 text-slate-400" />
+                  <Icon className="w-3.5 h-3.5 text-slate-400" />
                   {link.label}
                 </Link>
               );
@@ -82,7 +87,7 @@ export function Navbar() {
           </nav>
 
           {/* Action Buttons & Locale Switcher */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden md:flex items-center space-x-2.5">
             {/* Language Toggle */}
             <button
               onClick={toggleLocale}
@@ -93,24 +98,39 @@ export function Navbar() {
               <span>{locale === "bn" ? "English" : "বাংলা"}</span>
             </button>
 
-            {/* Dashboard Link */}
+            {/* Login Link */}
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-transparent transition-colors"
+            >
+              <LogIn className="w-3.5 h-3.5 text-slate-500" />
+              <span>লগইন</span>
+            </Link>
+
+            {/* Register / Dashboard Link */}
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors shadow-brand-700/20"
+              className="flex items-center gap-1.5 bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-xs transition-colors shadow-brand-700/20"
             >
-              <User className="w-4 h-4" />
+              <User className="w-3.5 h-3.5" />
               <span>{t.nav.dashboard}</span>
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex xl:hidden items-center gap-2">
             <button
               onClick={toggleLocale}
               className="px-2 py-1 text-xs font-semibold bg-slate-100 border border-slate-200 rounded text-slate-700"
             >
               {locale === "bn" ? "EN" : "বাং"}
             </button>
+            <Link
+              href="/login"
+              className="px-2.5 py-1 text-xs font-semibold bg-slate-100 border border-slate-200 rounded text-slate-700"
+            >
+              লগইন
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -124,8 +144,8 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-slate-200 bg-white px-4 pt-2 pb-6 space-y-2">
-          {navLinks.map((link) => {
+        <div className="xl:hidden border-b border-slate-200 bg-white px-4 pt-2 pb-6 space-y-1.5 max-h-[80vh] overflow-y-auto">
+          {publicNavLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname.startsWith(link.href);
             return (
@@ -133,24 +153,43 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 text-base font-medium rounded-lg ${
+                className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg ${
                   isActive
                     ? "text-brand-800 bg-brand-50 font-semibold"
                     : "text-slate-700 hover:bg-slate-100"
                 }`}
               >
-                <Icon className="w-5 h-5 text-brand-700" />
+                <Icon className="w-4 h-4 text-brand-700" />
                 {link.label}
               </Link>
             );
           })}
-          <div className="pt-4 border-t border-slate-100">
+
+          <div className="pt-3 border-t border-slate-100 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg text-center"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>লগইন</span>
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-white bg-brand-700 rounded-lg text-center"
+              >
+                <span>রেজিস্ট্রেশন (ফ্রি)</span>
+              </Link>
+            </div>
+
             <Link
               href="/dashboard"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-center gap-2 w-full bg-brand-700 hover:bg-brand-800 text-white px-4 py-3 text-base font-semibold rounded-lg shadow-sm"
+              className="flex items-center justify-center gap-2 w-full bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-xs"
             >
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4" />
               <span>{t.nav.dashboard}</span>
             </Link>
           </div>
