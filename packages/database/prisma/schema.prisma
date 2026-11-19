@@ -1,5 +1,6 @@
-// AbroadMate Prisma Database Schema
-// Enforcing verified sources, strict foreign keys, and Bangladeshi academic profiles
+// AbroadMate Production Database Schema
+// Fully normalized architecture adhering to strict foreign keys, historical preservation,
+// separate currency storage, UUIDs, soft deletion, and official data verification.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,10 +12,17 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum Role {
+// ---------------------------------------------------------
+// Global Enums
+// ---------------------------------------------------------
+
+enum AppRole {
   STUDENT
-  ADMIN
-  RESEARCHER
+  SUPER_ADMIN
+  DATA_MANAGER
+  VERIFICATION_MANAGER
+  SUPPORT_ADMIN
+  CONTENT_MANAGER
 }
 
 enum LanguagePreference {
@@ -43,358 +51,933 @@ enum EnglishTestType {
   NOT_TAKEN
 }
 
+enum AcademicEducationLevel {
+  SSC
+  HSC
+  O_LEVEL
+  A_LEVEL
+  DIPLOMA
+  BACHELOR
+  MASTER
+}
+
+enum SponsorRelationship {
+  SELF
+  FATHER
+  MOTHER
+  SPOUSE
+  SIBLING
+  ORGANIZATION
+  GOVERNMENT
+  OTHER
+}
+
 enum VerificationStatus {
   VERIFIED
   PENDING_REVIEW
+  REJECTED
   DEPRECATED
 }
 
+enum ReviewStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VERIFY
+  APPROVE
+  REJECT
+  LOGIN
+  LOGOUT
+  DOWNLOAD
+}
+
+enum DocumentCategory {
+  ACADEMIC_TRANSCRIPT
+  DEGREE_CERTIFICATE
+  LANGUAGE_TEST_TRF
+  BANK_SOLVENCY
+  BANK_STATEMENT_28DAY
+  SPONSOR_AFFIDAVIT
+  PASSPORT_BIOPAGE
+  NATIONAL_ID
+  POLICE_CLEARANCE
+  TUBERCULOSIS_TEST
+  SOP_ESSAY
+  RESUME_CV
+  RECOMMENDATION_LETTER
+  OFFER_LETTER
+  CAS_OR_I20
+  OTHER
+}
+
+enum ReminderChannel {
+  EMAIL
+  IN_APP
+  SMS
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  DEADLINE_ALERT
+  SCHOLARSHIP_MATCH
+  VISA_POLICY_UPDATE
+  SYSTEM
+}
+
 // ---------------------------------------------------------
-// User & Student Profile Domain
+// 1. Authentication and Users
 // ---------------------------------------------------------
 
 model User {
-  id            String             @id @default(uuid())
-  supabaseId    String             @unique // Maps directly to Supabase Auth UID
-  email         String             @unique
-  fullName      String
-  phone         String?
-  role          Role               @default(STUDENT)
-  preferredLang LanguagePreference @default(BN)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id                 String               @id @default(uuid())
+  supabaseId         String               @unique // Maps directly to Supabase Auth UID
+  email              String               @unique
+  fullName           String
+  phone              String?
+  primaryRole        AppRole              @default(STUDENT)
+  isActive           Boolean              @default(true)
+  deletedAt          DateTime?
 
-  profile       UserProfile?
-  roadmaps      StudentRoadmap[]
-  documents     UserDocument[]
-  conversations AIConversation[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  // Relationships
+  roles              UserRoleAssignment[]
+  settings           UserSettings?
+  consents           UserConsent[]
+  sessions           UserSessionMetadata[]
+  studentProfile     StudentProfile?
+  goals              UserGoal[]
+  roadmaps           Roadmap[]
+  documents          UserDocument[]
+  sopDocuments       SOPDocument[]
+  reminders          Reminder[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  adminRole          AdminRole?
+  reviewedData       DataReview[]         @relation("ReviewerRelation")
+  approvedPolicies   PolicyChangeApproval[] @relation("PolicyApproverRelation")
+  proposedPolicies   PolicyChangeApproval[] @relation("PolicyProposerRelation")
+  verificationsDone  VerificationRecord[] @relation("VerifierRelation")
 
   @@index([supabaseId])
   @@index([email])
+  @@index([primaryRole])
+  @@index([deletedAt])
 }
 
-model UserProfile {
-  id                   String        @id @default(uuid())
-  userId               String        @unique
-  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+model UserRoleAssignment {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       AppRole
+  assignedAt DateTime  @default(now())
+  assignedBy String?   // UUID of admin who granted the role
 
-  currentLevel         String // e.g. "hsc_passed", "bachelor_passed"
-  
-  // Secondary / Higher Secondary (Bangladeshi Scale 5.0)
-  sscGpa               Float?
-  sscPassingYear       Int?
-  sscBoard             String?
-  hscGpa               Float?
-  hscPassingYear       Int?
-  hscBoard             String?
-  hscGroup             String? // "science", "business", "humanities"
-
-  // Bachelor / Undergraduate (Bangladeshi Scale 4.0)
-  bachelorCgpa         Float?
-  bachelorPassingYear  Int?
-  bachelorUniversity   String?
-  bachelorMajor        String?
-  hasBacklogs          Boolean       @default(false)
-  backlogsCount        Int           @default(0)
-
-  // English Proficiency
-  englishTestType      EnglishTestType @default(NOT_TAKEN)
-  englishOverallBand   Float?
-  englishListening     Float?
-  englishReading       Float?
-  englishWriting       Float?
-  englishSpeaking      Float?
-  englishTestDate      DateTime?
-
-  // Financial & Intake Preferences
-  annualBudgetBdt      Float?
-  targetCountries      String[] // Array of ISO2 codes: ["GB", "CA", "AU", "DE", "US"]
-  targetIntakeSeason   IntakeSeason  @default(FALL)
-  targetIntakeYear     Int           @default(2026)
-  preferredField       String?
-
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
 }
 
-// ---------------------------------------------------------
-// Countries & Universities Domain
-// ---------------------------------------------------------
-
-model Country {
-  code                     String            @id // "GB", "CA", "AU", "DE", "US"
-  nameEn                   String
-  nameBn                   String
-  currencyCode             String            // GBP, CAD, AUD, EUR, USD
-  currencySymbol           String            // £, C$, A$, €, $
-  approxBdtRate            Float
-  officialImmigrationUrl   String
-  dhakaEmbassyName         String
-  dhakaEmbassyUrl          String
-  postStudyWorkDurationBn  String
-  avgMonthlyLivingCost     Float             // Local currency
-  blockedAccountRequired   Boolean           @default(false)
-  isActive                 Boolean           @default(true)
-
-  universities             University[]
-  scholarships             Scholarship[]
-  visaRequirements         VisaRequirement[]
-  sources                  InformationSource[]
-
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-}
-
-model University {
-  id                 String              @id @default(uuid())
-  countryCode        String
-  country            Country             @relation(fields: [countryCode], references: [code])
-  nameEn             String
-  nameBn             String
-  city               String
-  stateOrProvince    String?
-  worldRank          Int?
-  websiteUrl         String
-  logoUrl            String?
-  isPublic           Boolean             @default(true)
-  officialSourceUrl  String
-
-  programs           Program[]
-  sources            InformationSource[]
-
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  @@index([countryCode])
-  @@index([nameEn])
-}
-
-model Program {
-  id                 String              @id @default(uuid())
-  universityId       String
-  university         University          @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  titleEn            String
-  titleBn            String
-  degreeLevel        DegreeLevel         @default(MASTER)
-  department         String
-  durationMonths     Int                 @default(12)
-  annualTuitionLocal Float
-  currencyCode       String
-  minIeltsOverall    Float               @default(6.5)
-  minIeltsEachBand   Float               @default(6.0)
-  minGpaRequirement  Float               @default(3.0)
-  officialSourceUrl  String
-
-  intakes            ProgramIntake[]
-  sources            InformationSource[]
-
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  @@index([universityId])
-  @@index([degreeLevel])
-}
-
-model ProgramIntake {
-  id                 String              @id @default(uuid())
-  programId          String
-  program            Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
-  season             IntakeSeason
-  year               Int
-  applicationDeadline DateTime
-  sessionStartDate   DateTime?
-
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  @@index([programId])
-}
-
-// ---------------------------------------------------------
-// Scholarships Domain
-// ---------------------------------------------------------
-
-model Scholarship {
-  id                     String              @id @default(uuid())
-  countryCode            String
-  country                Country             @relation(fields: [countryCode], references: [code])
-  titleEn                String
-  titleBn                String
-  providerType           String              // "GOVERNMENT", "UNIVERSITY", "TRUST"
-  coverageType           String              // "FULL_FUNDED", "TUITION_WAIVER", "STIPEND_ONLY"
-  coverageDescriptionBn  String
-  eligibilityCriteriaBn  String
-  officialPortalUrl      String
-  deadlineNotice         String?
-  sources                InformationSource[]
-
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-
-  @@index([countryCode])
-}
-
-// ---------------------------------------------------------
-// Visa Requirements Domain
-// ---------------------------------------------------------
-
-model VisaRequirement {
-  id                     String              @id @default(uuid())
-  countryCode            String
-  country                Country             @relation(fields: [countryCode], references: [code])
-  subclassNameEn         String
-  subclassNameBn         String
-  minLivingFundsAnnual   Float
-  currencyCode           String
-  financialProofRulesBn  String
-  blockedAccountRequired Boolean             @default(false)
-  embassyInterviewRulesBn String?
-  officialSourceUrl      String
-
-  steps                  VisaStep[]
-  sources                InformationSource[]
-
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-
-  @@index([countryCode])
-}
-
-model VisaStep {
-  id                 String              @id @default(uuid())
-  visaRequirementId  String
-  visaRequirement    VisaRequirement     @relation(fields: [visaRequirementId], references: [id], onDelete: Cascade)
-  stepNumber         Int
-  titleBn            String
-  titleEn            String
-  descriptionBn      String
-  officialLink       String?
-
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  @@index([visaRequirementId])
-}
-
-// ---------------------------------------------------------
-// Roadmaps & Timeline Domain
-// ---------------------------------------------------------
-
-model StudentRoadmap {
-  id                 String              @id @default(uuid())
-  userId             String
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  targetCountryCode  String
-  targetIntakeSeason IntakeSeason
-  targetIntakeYear   Int
-  currentStage       String              @default("PREPARATION")
-
-  milestones         RoadmapMilestone[]
-
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+model UserSettings {
+  id                     String             @id @default(uuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferredLang          LanguagePreference @default(BN)
+  currencyPreference     String             @default("BDT") // BDT, GBP, CAD, EUR, USD
+  deadlineAlertsEmail    Boolean            @default(true)
+  deadlineAlertsWeb      Boolean            @default(true)
+  scholarshipAlerts      Boolean            @default(true)
+  visaRuleUpdates        Boolean            @default(true)
+  weeklyRoadmapChecklist Boolean            @default(false)
+  updatedAt              DateTime           @updatedAt
 
   @@index([userId])
 }
 
-model RoadmapMilestone {
-  id                 String              @id @default(uuid())
-  roadmapId          String
-  roadmap            StudentRoadmap      @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  orderIndex         Int
-  titleBn            String
-  titleEn            String
-  descriptionBn      String
-  targetDate         DateTime
-  isCompleted        Boolean             @default(false)
-  completedAt        DateTime?
-  actionUrl          String?
+model UserConsent {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentType    String    // e.g. "TERMS_AND_CONDITIONS", "PRIVACY_POLICY", "NON_AGENCY_AGREEMENT"
+  consentVersion String    // e.g. "v1.0"
+  ipAddress      String?
+  userAgent      String?
+  grantedAt      DateTime  @default(now())
+  revokedAt      DateTime?
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  @@index([userId])
+  @@index([consentType])
+}
 
-  @@index([roadmapId])
+model UserSessionMetadata {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType   String?   // "desktop", "mobile", "tablet"
+  browserName  String?   // "Chrome", "Firefox", "Safari"
+  operatingSys String?   // "Windows", "macOS", "Android", "iOS"
+  ipAddress    String?
+  userAgent    String?
+  cityLocation String?   // e.g. "Dhaka, Bangladesh"
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ---------------------------------------------------------
-// Documents Vault Domain
+// 2. Student Profile
 // ---------------------------------------------------------
 
-model UserDocument {
+model StudentProfile {
+  id                   String               @id @default(uuid())
+  userId               String               @unique
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentLevel         String               // "hsc_passed", "bachelor_passed", "master_passed"
+  targetDegreeLevel    DegreeLevel          @default(MASTER)
+  targetField          String?              // "Computer Science & AI"
+  targetIntakeSeason   IntakeSeason         @default(FALL)
+  targetIntakeYear     Int                  @default(2026)
+  completionPercentage Int                  @default(25) // 0-100 meter
+  deletedAt            DateTime?
+
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  // Relationships
+  academicRecords      AcademicRecord[]
+  languageTests        LanguageTestRecord[]
+  employmentRecords    EmploymentRecord[]
+  financialProfile     FinancialProfile?
+  immigrationHistory   ImmigrationHistory[]
+  studyPreference      StudyPreference?
+
+  @@index([userId])
+  @@index([targetDegreeLevel])
+  @@index([targetIntakeSeason, targetIntakeYear])
+}
+
+model AcademicRecord {
+  id               String                 @id @default(uuid())
+  profileId        String
+  profile          StudentProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  level            AcademicEducationLevel
+  institutionName  String
+  boardOrAuthority String?                // e.g. "Dhaka", "Cambridge", "University of Dhaka"
+  groupOrMajor     String?                // "Science", "Business Studies", "CSE"
+  gpaOrCgpa        Float                  // 0.0 - 5.0 (for SSC/HSC) or 0.0 - 4.0 (for Bachelor)
+  scale            Float                  @default(4.0) // 5.0 or 4.0
+  passingYear      Int
+  hasBacklogs      Boolean                @default(false)
+  backlogsCount    Int                    @default(0)
+  isVerified       Boolean                @default(false)
+  certificateDocId String?
+  transcriptDocId  String?
+
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@index([profileId])
+  @@index([level])
+}
+
+model LanguageTestRecord {
+  id               String          @id @default(uuid())
+  profileId        String
+  profile          StudentProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  testType         EnglishTestType @default(IELTS)
+  overallScore     Float?          // e.g. 7.5
+  listeningScore   Float?
+  readingScore     Float?
+  writingScore     Float?
+  speakingScore    Float?
+  testDate         DateTime?
+  expiryDate       DateTime?
+  trfNumber        String?         // Test Report Form Number
+  isVerified       Boolean         @default(false)
+  certificateDocId String?
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([profileId])
+  @@index([testType])
+}
+
+model EmploymentRecord {
+  id          String         @id @default(uuid())
+  profileId   String
+  profile     StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  companyName String
+  designation String
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean        @default(false)
+  description String?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([profileId])
+}
+
+model FinancialProfile {
+  id                      String          @id @default(uuid())
+  profileId               String          @unique
+  profile                 StudentProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  annualTuitionBudget     Float           // Stored as decimal / float amount
+  budgetCurrencyCode      String          @default("BDT")
+  liquidSavingsAmount     Float           @default(0)
+  savingsCurrencyCode     String          @default("BDT")
+  primaryBankName         String?
+  accountHoldingMonths    Int             @default(0)
+  fundingStrategyType     String          @default("SELF_AND_FAMILY") // SELF, PARTIAL_SCHOLARSHIP, FULL_SCHOLARSHIP
+
+  sponsors                Sponsor[]
+
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([profileId])
+}
+
+model Sponsor {
   id                 String              @id @default(uuid())
-  userId             String
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documentType       String              // "SOP", "CV", "PASSPORT", "TRANSCRIPT", "BANK_SOLVENCY"
-  title              String
-  storagePath        String              // Supabase storage bucket path
-  fileSize           Int
-  mimeType           String
+  financialProfileId String
+  financialProfile   FinancialProfile    @relation(fields: [financialProfileId], references: [id], onDelete: Cascade)
+  relationship       SponsorRelationship @default(SELF)
+  name               String
+  occupation         String?
+  annualIncomeAmount Float?
+  incomeCurrencyCode String              @default("BDT")
+  committedAmount    Float?
+  fundsCurrencyCode  String              @default("BDT")
+  affidavitDocId     String?
   isVerified         Boolean             @default(false)
 
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
-  @@index([userId])
+  @@index([financialProfileId])
+}
+
+model ImmigrationHistory {
+  id                  String         @id @default(uuid())
+  profileId           String
+  profile             StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  countryCode         String         // e.g. "GB", "CA", "US"
+  visaTypeApplied     String?
+  applicationYear     Int
+  outcomeStatus       String         // "GRANTED", "REFUSED", "WITHDRAWN"
+  hasPreviousRefusal  Boolean        @default(false)
+  refusalReasonNotice String?
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([profileId])
+  @@index([countryCode])
+}
+
+model StudyPreference {
+  id                   String         @id @default(uuid())
+  profileId            String         @unique
+  profile              StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  targetCountryCodes   String[]       // ["GB", "CA", "DE"]
+  preferredCityType    String         @default("AFFORDABLE_STUDENT_TOWN") // "METROPOLITAN", "AFFORDABLE_STUDENT_TOWN", "RESEARCH_CAMPUS"
+  pswWorkImportance    String         @default("HIGH") // "HIGH", "MEDIUM", "LOW"
+  priorityRankingRange String?        // "TOP_100", "TOP_250", "ANY_ACCREDITED"
+
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([profileId])
 }
 
 // ---------------------------------------------------------
-// AI Assistant & SOP Generator Domain
+// 3. Study Abroad Data
 // ---------------------------------------------------------
 
-model AIConversation {
-  id                 String              @id @default(uuid())
-  userId             String
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title              String              @default("নতুন কথোপকথন")
+model Country {
+  code                    String            @id // "GB", "CA", "AU", "DE", "US"
+  iso2                    String            @unique
+  nameEn                  String
+  nameBn                  String
+  flagEmoji               String
+  currencyCode            String            // GBP, CAD, AUD, EUR, USD
+  currencySymbol          String            // £, C$, A$, €, $
+  approxBdtRate           Float             // Benchmark conversion rate to BDT
+  officialImmigrationUrl  String
+  dhakaEmbassyName        String
+  dhakaEmbassyUrl         String
+  postStudyWorkDurationBn String
+  avgMonthlyLivingCost    Float             // Stored in local currency
+  blockedAccountRequired  Boolean           @default(false)
+  isActive                Boolean           @default(true)
 
-  messages           AIMessage[]
+  universities            University[]
+  visaTypes               VisaType[]
+  scholarships            Scholarship[]
+  visaRequirements        VisaRequirement[]
+  sources                 InformationSource[]
+
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@index([code])
+}
+
+model VisaType {
+  id                 String              @id @default(uuid())
+  countryCode        String
+  country            Country             @relation(fields: [countryCode], references: [code])
+  visaCode           String              // e.g. "STUDENT_ROUTE", "STUDY_PERMIT", "SUBCLASS_500", "NATIONAL_D"
+  nameEn             String
+  nameBn             String
+  category           String              // "UNDERGRADUATE_POSTGRADUATE"
+  officialFeeAmount  Float
+  feeCurrencyCode    String
+  processingDaysAvg  Int                 @default(21)
+
+  requirements       VisaRequirement[]
 
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
-  @@index([userId])
+  @@unique([countryCode, visaCode])
+  @@index([countryCode])
 }
 
-model AIMessage {
-  id                 String              @id @default(uuid())
-  conversationId     String
-  conversation       AIConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role               String              // "user", "assistant", "system"
-  content            String
-  citationsJson      String?             // JSON array of verified source URLs referenced
+model University {
+  id                String              @id @default(uuid())
+  countryCode       String
+  country           Country             @relation(fields: [countryCode], references: [code])
+  nameEn            String
+  nameBn            String
+  city              String
+  stateOrProvince   String?
+  worldRank         Int?
+  websiteUrl        String
+  logoUrl           String?
+  isPublic          Boolean             @default(true)
+  officialSourceUrl String
 
-  createdAt          DateTime            @default(now())
+  programs          Program[]
+  sources           InformationSource[]
 
-  @@index([conversationId])
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([countryCode])
+  @@index([nameEn])
+  @@index([worldRank])
+}
+
+model Program {
+  id                    String                @id @default(uuid())
+  universityId          String
+  university            University            @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  titleEn               String
+  titleBn               String
+  degreeLevel           DegreeLevel           @default(MASTER)
+  department            String
+  durationMonths        Int                   @default(12)
+  annualTuitionAmount   Float
+  tuitionCurrencyCode   String
+  officialSourceUrl     String
+
+  admissionRequirements AdmissionRequirement?
+  intakes               ProgramIntake[]
+  sources               InformationSource[]
+
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([universityId])
+  @@index([degreeLevel])
+}
+
+model AdmissionRequirement {
+  id                     String      @id @default(uuid())
+  programId              String      @unique
+  program                Program     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  minGpaOrCgpa           Float       @default(3.0)
+  gpaScale               Float       @default(4.0)
+  minIeltsOverall        Float       @default(6.5)
+  minIeltsEachBand       Float       @default(6.0)
+  greRequired            Boolean     @default(false)
+  minGreScore            Int?
+  gmatRequired           Boolean     @default(false)
+  minGmatScore           Int?
+  workExperienceMonths   Int         @default(0)
+  requiredDocumentsJson  String?     // JSON list of required files
+  notesBn                String?
+
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@index([programId])
+}
+
+model ProgramIntake {
+  id                  String       @id @default(uuid())
+  programId           String
+  program             Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  season              IntakeSeason
+  year                Int
+  applicationDeadline DateTime
+  sessionStartDate    DateTime?
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([programId])
+  @@index([year, season])
+}
+
+model Scholarship {
+  id                    String                       @id @default(uuid())
+  countryCode           String
+  country               Country                      @relation(fields: [countryCode], references: [code])
+  titleEn               String
+  titleBn               String
+  providerType          String                       // "GOVERNMENT", "UNIVERSITY", "TRUST"
+  coverageType          String                       // "FULL_FUNDED", "TUITION_WAIVER", "STIPEND_ONLY"
+  stipendMonthlyAmount  Float?
+  stipendCurrencyCode   String?
+  coverageDescriptionBn String
+  eligibilityCriteriaBn String
+  officialPortalUrl     String
+  deadlineNotice        String?
+
+  eligibilityRules      ScholarshipEligibilityRule[]
+  sources               InformationSource[]
+
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+
+  @@index([countryCode])
+  @@index([coverageType])
+}
+
+model ScholarshipEligibilityRule {
+  id                   String        @id @default(uuid())
+  scholarshipId        String
+  scholarship          Scholarship   @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  minCgpaRequired      Float?
+  minIeltsRequired     Float?
+  eligibleDegreeLevels DegreeLevel[]
+  workExperienceMonths Int           @default(0)
+  targetNationalities  String[]      @default(["BD"])
+  ruleDescriptionBn    String?
+
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([scholarshipId])
 }
 
 // ---------------------------------------------------------
-// Official Source Tracking & Verification (Anti-Hallucination)
+// 4. Visa and Research (Historical & Audit-Proof)
 // ---------------------------------------------------------
+
+model VisaRequirement {
+  id               String                   @id @default(uuid())
+  countryCode      String
+  country          Country                  @relation(fields: [countryCode], references: [code])
+  visaTypeId       String
+  visaType         VisaType                 @relation(fields: [visaTypeId], references: [id])
+  isCurrentActive  Boolean                  @default(true)
+
+  // Version history: Never delete older policy records!
+  versions         VisaRequirementVersion[]
+  sources          InformationSource[]
+
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([countryCode])
+  @@index([visaTypeId])
+}
+
+model VisaRequirementVersion {
+  id                   String                   @id @default(uuid())
+  visaRequirementId    String
+  visaRequirement      VisaRequirement          @relation(fields: [visaRequirementId], references: [id], onDelete: Cascade)
+  versionNumber        Int                      @default(1)
+  effectiveFromDate    DateTime
+  effectiveToDate      DateTime?                // NULL means currently active version
+  isArchived           Boolean                  @default(false)
+  changeSummaryBn      String
+  officialGazetteUrl   String
+
+  financialRules       VisaFinancialRule[]
+  documentRequirements VisaDocumentRequirement[]
+  approvals            PolicyChangeApproval[]
+
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  @@index([visaRequirementId])
+  @@index([isArchived])
+}
+
+model VisaFinancialRule {
+  id                       String                 @id @default(uuid())
+  versionId                String
+  version                  VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  requiredLivingFunds      Float                  // Minimum amount required
+  fundsCurrencyCode        String
+  maintenancePeriodDays    Int                    @default(28) // e.g. UK 28-day rule
+  blockedAccountRequired   Boolean                @default(false)
+  monthlyLivingRate        Float?
+  acceptableInstrumentsBn  String                 // "অনুমোদিত সিডিউল ব্যাংক একাউন্টে সেভিংস বা ফিক্সড ডিপোজিট"
+  unacceptableFundsBn      String?                // "শেয়ার মার্কেট, প্রাইজবন্ড গ্রহণযোগ্য নয়"
+
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+
+  @@index([versionId])
+}
+
+model VisaDocumentRequirement {
+  id                 String                 @id @default(uuid())
+  versionId          String
+  version            VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  category           DocumentCategory
+  titleEn            String
+  titleBn            String
+  isMandatory        Boolean                @default(true)
+  attestationRuleBn  String?                // "শিক্ষা মন্ত্রণালয় ও পররাষ্ট্র মন্ত্রণালয় সত্যায়ন"
+  notesBn            String?
+
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([versionId])
+  @@index([category])
+}
 
 model InformationSource {
-  id                 String              @id @default(uuid())
-  title              String
-  authorityName      String              // e.g. "UK Visas and Immigration", "German Federal Foreign Office"
-  officialUrl        String
-  countryCode        String?
-  country            Country?            @relation(fields: [countryCode], references: [code])
-  universityId       String?
-  university         University?         @relation(fields: [universityId], references: [id])
-  programId          String?
-  program            Program?            @relation(fields: [programId], references: [id])
-  scholarshipId      String?
-  scholarship        Scholarship?        @relation(fields: [scholarshipId], references: [id])
-  visaRequirementId  String?
-  visaRequirement    VisaRequirement?    @relation(fields: [visaRequirementId], references: [id])
+  id                String              @id @default(uuid())
+  title             String
+  authorityName     String              // "UK Visas and Immigration", "IRCC Canada"
+  officialUrl       String
+  countryCode       String?
+  country           Country?            @relation(fields: [countryCode], references: [code])
+  universityId      String?
+  university        University?         @relation(fields: [universityId], references: [id])
+  programId         String?
+  program           Program?            @relation(fields: [programId], references: [id])
+  scholarshipId     String?
+  scholarship       Scholarship?        @relation(fields: [scholarshipId], references: [id])
+  visaRequirementId String?
+  visaRequirement   VisaRequirement?    @relation(fields: [visaRequirementId], references: [id])
   
-  status             VerificationStatus  @default(VERIFIED)
-  lastVerifiedAt     DateTime            @default(now())
-  verifiedBy         String?
+  status            VerificationStatus  @default(VERIFIED)
+  lastVerifiedAt    DateTime            @default(now())
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  records           SourceRecord[]
+  changeLogs        SourceChangeLog[]
+  verifications     VerificationRecord[]
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@index([officialUrl])
   @@index([status])
+}
+
+model SourceRecord {
+  id             String            @id @default(uuid())
+  sourceId       String
+  source         InformationSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  snapshotHash   String            // SHA-256 hash of official content
+  rawContent     String?           // Text snapshot from official portal
+  scrapedAt      DateTime          @default(now())
+
+  @@index([sourceId])
+}
+
+model SourceChangeLog {
+  id                 String            @id @default(uuid())
+  sourceId           String
+  source             InformationSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  fieldChanged       String
+  oldValue           String?
+  newValue           String?
+  detectedAt         DateTime          @default(now())
+  requiresHumanReview Boolean          @default(true)
+  isResolved         Boolean           @default(false)
+
+  @@index([sourceId])
+  @@index([requiresHumanReview])
+}
+
+model VerificationRecord {
+  id                 String             @id @default(uuid())
+  sourceId           String
+  source             InformationSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  verifiedByUserId   String
+  verifiedByUser     User               @relation("VerifierRelation", fields: [verifiedByUserId], references: [id])
+  verificationMethod String             // "OFFICIAL_PORTAL_CROSSCHECK", "EMBASSY_CIRCULAR"
+  verificationNotes  String?
+  verifiedAt         DateTime           @default(now())
+
+  @@index([sourceId])
+  @@index([verifiedByUserId])
+}
+
+// ---------------------------------------------------------
+// 5. Student Activities
+// ---------------------------------------------------------
+
+model UserGoal {
+  id                  String       @id @default(uuid())
+  userId              String
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetCountryCodes  String[]     // ["GB", "CA"]
+  targetDegreeLevel   DegreeLevel  @default(MASTER)
+  targetMajor         String
+  targetIntakeSeason  IntakeSeason @default(FALL)
+  targetIntakeYear    Int          @default(2026)
+  annualBudgetAmount  Float
+  budgetCurrencyCode  String       @default("BDT")
+  fundingStrategy     String       @default("PARTIAL_SCHOLARSHIP")
+  postStudyPriority   String       @default("HIGH")
+  campusPreference    String       @default("AFFORDABLE")
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([userId])
+}
+
+model Roadmap {
+  id                 String         @id @default(uuid())
+  userId             String
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetCountryCode  String
+  targetIntakeSeason IntakeSeason
+  targetIntakeYear   Int
+  currentStageNumber Int            @default(2) // Stages 1 to 5
+  isCompleted        Boolean        @default(false)
+
+  phases             RoadmapPhase[]
+
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model RoadmapPhase {
+  id                 String        @id @default(uuid())
+  roadmapId          String
+  roadmap            Roadmap       @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  phaseNumber        Int           // 1 to 5
+  timeframeNoticeBn  String        // "ইনটেকের ৯-১১ মাস পূর্বে"
+  titleBn            String
+  titleEn            String
+  isCompleted        Boolean       @default(false)
+
+  tasks              RoadmapTask[]
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([roadmapId])
+}
+
+model RoadmapTask {
+  id           String       @id @default(uuid())
+  phaseId      String
+  phase        RoadmapPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  titleBn      String
+  titleEn      String
+  description  String?
+  isCompleted  Boolean      @default(false)
+  completedAt  DateTime?
+  actionUrl    String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([phaseId])
+}
+
+model UserDocument {
+  id            String           @id @default(uuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bucketName    String           // Supabase storage bucket name
+  storagePath   String           // Path in Supabase: e.g. "userId/academic/uuid-file.pdf"
+  category      DocumentCategory
+  fileName      String
+  fileSize      Int              // In bytes
+  mimeType      String           // e.g. "application/pdf"
+  isVerified    Boolean          @default(false)
+  deletedAt     DateTime?        // Soft delete
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([deletedAt])
+}
+
+model SOPDocument {
+  id                 String     @id @default(uuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  targetCountryCode  String?
+  targetUniversity   String?
+  targetProgram      String?
+  content            String     @db.Text
+  versionNumber      Int        @default(1)
+  aiFeedbackJson     String?    // Stored structured feedback points
+  isFinalized        Boolean    @default(false)
+  deletedAt          DateTime?
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model Deadline {
+  id                 String     @id @default(uuid())
+  titleBn            String
+  titleEn            String
+  category           String     // "SCHOLARSHIP", "UNIVERSITY", "TEST", "VISA"
+  countryCode        String?
+  deadlineDate       DateTime
+  officialUrl        String?
+  notesBn            String?
+  isGlobal           Boolean    @default(true)
+
+  reminders          Reminder[]
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([deadlineDate])
+  @@index([category])
+}
+
+model Reminder {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deadlineId    String?
+  deadline      Deadline?       @relation(fields: [deadlineId], references: [id], onDelete: SetNull)
+  customTitle   String?
+  reminderDate  DateTime
+  channel       ReminderChannel @default(EMAIL)
+  isTriggered   Boolean         @default(false)
+  triggeredAt   DateTime?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([reminderDate])
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        NotificationType @default(INFO)
+  actionUrl   String?
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+
+  createdAt   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+// ---------------------------------------------------------
+// 6. Administration, Security & Audit
+// ---------------------------------------------------------
+
+model AdminRole {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        AppRole
+  permissions String[]  // Specific permission tokens
+  assignedAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([role])
+}
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action       AuditAction
+  resourceType String      // "USER", "VISA_REQUIREMENT", "SCHOLARSHIP", "DOCUMENT"
+  resourceId   String
+  ipAddress    String?
+  userAgent    String?
+  changesJson  String?     // Before/after state snapshot in JSON
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model DataReview {
+  id           String       @id @default(uuid())
+  entityType   String       // "STUDENT_DOCUMENT", "ACADEMIC_RECORD", "SPONSOR"
+  entityId     String
+  reviewerId   String?
+  reviewer     User?        @relation("ReviewerRelation", fields: [reviewerId], references: [id])
+  status       ReviewStatus @default(PENDING)
+  reviewNotes  String?
+  reviewedAt   DateTime?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([status])
+}
+
+model PolicyChangeApproval {
+  id                 String                 @id @default(uuid())
+  versionId          String
+  version            VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  proposedByUserId   String
+  proposedByUser     User                   @relation("PolicyProposerRelation", fields: [proposedByUserId], references: [id])
+  approvedByUserId   String?
+  approvedByUser     User?                  @relation("PolicyApproverRelation", fields: [approvedByUserId], references: [id])
+  approvalStatus     ReviewStatus           @default(PENDING)
+  decisionComment    String?
+  decidedAt          DateTime?
+
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([versionId])
+  @@index([approvalStatus])
 }
