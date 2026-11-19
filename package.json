@@ -1,0 +1,36 @@
+{
+  "name": "abroadmate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Free Bengali-first AI-powered Study Abroad Guidance Platform for Bangladeshi Students",
+  "scripts": {
+    "dev": "pnpm --filter @abroadmate/web dev",
+    "build": "pnpm --filter @abroadmate/web build",
+    "start": "pnpm --filter @abroadmate/web start",
+    "lint": "pnpm --filter \"@abroadmate/*\" lint",
+    "type-check": "pnpm --filter \"@abroadmate/*\" type-check",
+    "test": "pnpm --filter \"@abroadmate/*\" test",
+    "test:e2e": "playwright test",
+    "worker:dev": "pnpm --filter @abroadmate/worker dev",
+    "db:generate": "pnpm --filter @abroadmate/database db:generate",
+    "db:push": "pnpm --filter @abroadmate/database db:push",
+    "db:seed": "pnpm --filter @abroadmate/database db:seed"
+  },
+  "keywords": [
+    "study-abroad",
+    "bangladesh",
+    "higher-education",
+    "bengali",
+    "ielts",
+    "scholarship",
+    "visa"
+  ],
+  "author": "AbroadMate Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.7.3",
+    "vitest": "^5.1.1"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
