@@ -34,6 +34,29 @@ enum DegreeLevel {
   BACHELOR
   MASTER
   PHD
+  DIPLOMA
+}
+
+enum SubjectCategory {
+  COMPUTER_SCIENCE_IT
+  DATA_SCIENCE_AI
+  ENGINEERING_TECHNOLOGY
+  BUSINESS_MANAGEMENT
+  HEALTH_MEDICAL_SCIENCES
+  NATURAL_SCIENCES
+  SOCIAL_SCIENCES_HUMANITIES
+  LAW_LEGAL_STUDIES
+}
+
+enum FavoriteCategory {
+  AMBITIOUS
+  TARGET
+  SAFE
+}
+
+enum FavoriteItemType {
+  UNIVERSITY
+  PROGRAM
 }
 
 enum IntakeSeason {
@@ -78,6 +101,8 @@ enum VerificationStatus {
   PENDING_REVIEW
   REJECTED
   DEPRECATED
+  NEEDS_UPDATE
+  UNVERIFIED
 }
 
 enum ReviewStatus {
@@ -164,6 +189,7 @@ model User {
   notifications      Notification[]
   auditLogs          AuditLog[]
   adminRole          AdminRole?
+  savedFavorites     SavedFavorite[]
   reviewedData       DataReview[]         @relation("ReviewerRelation")
   approvedPolicies   PolicyChangeApproval[] @relation("PolicyApproverRelation")
   proposedPolicies   PolicyChangeApproval[] @relation("PolicyProposerRelation")
@@ -450,6 +476,13 @@ model Country {
   currencyCode            String            // GBP, CAD, AUD, EUR, USD
   currencySymbol          String            // £, C$, A$, €, $
   approxBdtRate           Float             // Benchmark conversion rate to BDT
+  officialLanguage        String            @default("English")
+  commonStudyLanguages    String[]          @default(["English"])
+  educationSystemOverviewBn String?         @db.Text
+  degreeStructuresJson    String?           // JSON details on Bachelor, Master, PhD lengths
+  tuitionCostRangesBn     String?           // Human-readable tuition range description
+  livingCostInfoBn        String?           // Human-readable living cost overview
+  officialEducationUrl    String?           // e.g. Study in the UK, EduCanada, DAAD
   officialImmigrationUrl  String
   dhakaEmbassyName        String
   dhakaEmbassyUrl         String
@@ -457,17 +490,43 @@ model Country {
   avgMonthlyLivingCost    Float             // Stored in local currency
   blockedAccountRequired  Boolean           @default(false)
   isActive                Boolean           @default(true)
+  lastVerifiedAt          DateTime          @default(now())
 
   universities            University[]
   visaTypes               VisaType[]
   scholarships            Scholarship[]
   visaRequirements        VisaRequirement[]
   sources                 InformationSource[]
+  policyVersions          CountryPolicyVersion[]
 
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
 
   @@index([code])
+}
+
+model CountryPolicyVersion {
+  id                     String    @id @default(uuid())
+  countryCode            String
+  country                Country   @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+  versionNumber          Int       @default(1)
+  effectiveFromDate      DateTime
+  effectiveToDate        DateTime? // NULL means active
+  isArchived             Boolean   @default(false)
+  changeSummaryBn        String
+  officialGazetteUrl     String?
+  livingCostMonthlyLocal Float?
+  livingCostCurrencyCode String?
+  blockedAccountRequired Boolean   @default(false)
+  blockedAccountAmount   Float?
+  pswDurationMonths      Int?
+  weeklyWorkHoursPermit  Int?      @default(20)
+
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([countryCode])
+  @@index([isArchived])
 }
 
 model VisaType {
@@ -492,28 +551,40 @@ model VisaType {
 }
 
 model University {
-  id                String              @id @default(uuid())
-  countryCode       String
-  country           Country             @relation(fields: [countryCode], references: [code])
-  nameEn            String
-  nameBn            String
-  city              String
-  stateOrProvince   String?
-  worldRank         Int?
-  websiteUrl        String
-  logoUrl           String?
-  isPublic          Boolean             @default(true)
-  officialSourceUrl String
+  id                      String              @id @default(uuid())
+  countryCode             String
+  country                 Country             @relation(fields: [countryCode], references: [code])
+  nameEn                  String
+  nameBn                  String
+  city                    String
+  stateOrProvince         String?
+  worldRank               Int?
+  websiteUrl              String
+  admissionsUrl           String?
+  applicationUrl          String?
+  institutionType         String              @default("PUBLIC_RESEARCH") // PUBLIC_RESEARCH, PRIVATE_NON_PROFIT, etc.
+  accreditationDetailsBn  String?             // e.g. "UK HESA / Office for Students Accredited", "IRCC DLI O1932533212"
+  recognizingAuthority    String?             // e.g. "UK QAA / OfS", "IRCC Canada", "TEQSA Australia", "KMK Anabin Germany", "US Dept of Education"
+  institutionRegistryCode String?             // DLI #, CRICOS Code, Anabin Status
+  internationalStudentUrl String?
+  verificationStatus      VerificationStatus  @default(VERIFIED)
+  isRecognized            Boolean             @default(true)
+  logoUrl                 String?
+  isPublic                Boolean             @default(true)
+  officialSourceUrl       String
+  lastVerifiedAt          DateTime            @default(now())
 
-  programs          Program[]
-  sources           InformationSource[]
+  programs                Program[]
+  sources                 InformationSource[]
+  savedByStudents         SavedFavorite[]
 
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
 
   @@index([countryCode])
   @@index([nameEn])
   @@index([worldRank])
+  @@index([verificationStatus])
 }
 
 model Program {
@@ -523,21 +594,28 @@ model Program {
   titleEn               String
   titleBn               String
   degreeLevel           DegreeLevel           @default(MASTER)
+  subjectCategory       SubjectCategory       @default(COMPUTER_SCIENCE_IT)
   department            String
   durationMonths        Int                   @default(12)
+  studyMode             String                @default("FULL_TIME") // "FULL_TIME", "PART_TIME", "HYBRID"
   annualTuitionAmount   Float
   tuitionCurrencyCode   String
+  prerequisitesBn       String?
+  officialProgramUrl    String?
   officialSourceUrl     String
+  lastVerifiedAt        DateTime              @default(now())
 
   admissionRequirements AdmissionRequirement?
   intakes               ProgramIntake[]
   sources               InformationSource[]
+  savedByStudents       SavedFavorite[]
 
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
   @@index([universityId])
   @@index([degreeLevel])
+  @@index([subjectCategory])
 }
 
 model AdmissionRequirement {
@@ -888,6 +966,26 @@ model SOPDocument {
   updatedAt          DateTime   @updatedAt
 
   @@index([userId])
+}
+
+model SavedFavorite {
+  id           String            @id @default(uuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemType     FavoriteItemType  @default(UNIVERSITY)
+  universityId String?
+  university   University?       @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  programId    String?
+  program      Program?          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  category     FavoriteCategory  @default(TARGET)
+  notes        String?
+
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([userId, itemType])
+  @@index([category])
 }
 
 model Deadline {

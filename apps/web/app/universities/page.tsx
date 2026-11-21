@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -19,771 +19,894 @@ import {
   ShieldCheck,
   ChevronDown,
   Info,
+  Bookmark,
+  BookmarkCheck,
+  SlidersHorizontal,
+  Clock,
+  Layers,
+  Heart,
+  Calendar,
 } from "lucide-react";
+import { formatBdt, COUNTRY_LIST } from "@abroadmate/shared";
 
 interface UniversityItem {
   id: string;
   nameEn: string;
   nameBn: string;
-  countryCode: "GB" | "CA" | "AU" | "DE" | "US";
-  countryNameBn: string;
-  flag: string;
+  countryCode: string;
   city: string;
-  stateOrRegion: string;
-  worldRank: number;
-  isPublic: boolean;
-  minIelts: number;
-  annualTuitionLocal: string;
-  annualTuitionBdtApprox: string;
-  tuitionTier: "free" | "moderate" | "standard";
-  topPrograms: string[];
-  intakes: string[];
-  bangladeshRequirementNote: string;
+  stateOrProvince?: string;
+  worldRank?: number;
   websiteUrl: string;
-  officialAdmissionUrl: string;
-  highlightTag: string;
+  admissionsUrl?: string;
+  applicationUrl?: string;
+  institutionType: string;
+  accreditationDetailsBn?: string;
+  recognizingAuthority?: string;
+  institutionRegistryCode?: string;
+  internationalStudentUrl?: string;
+  verificationStatus: string;
+  isRecognized: boolean;
+  isPublic: boolean;
+  officialSourceUrl: string;
+  country?: {
+    code: string;
+    nameEn: string;
+    nameBn: string;
+    flagEmoji: string;
+    currencyCode: string;
+    currencySymbol: string;
+    approxBdtRate: number;
+  };
+  _count?: {
+    programs: number;
+  };
 }
 
-const UNIVERSITIES_DATA: UniversityItem[] = [
-  // Germany
-  {
-    id: "tum",
-    nameEn: "Technical University of Munich (TUM)",
-    nameBn: "মিউনিখ টেকনিক্যাল ইউনিভার্সিটি (টিইউএম)",
-    countryCode: "DE",
-    countryNameBn: "জার্মানি",
-    flag: "🇩🇪",
-    city: "Munich",
-    stateOrRegion: "Bavaria",
-    worldRank: 28,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "€০ - €৪,০০০ / সেমিস্টার (কোর্সভেদে)",
-    annualTuitionBdtApprox: "০ - ৫,২০,০০০ টাকা",
-    tuitionTier: "free",
-    topPrograms: ["কম্পিউটার সায়েন্স", "মেকানিক্যাল ইঞ্জিনিয়ারিং", "ডাটা ইঞ্জিনিয়ারিং", "বায়োটেকনোলজি"],
-    intakes: ["উইন্টার (Winter - অক্টোবর)", "সামার (Summer - এপ্রিল)"],
-    bangladeshRequirementNote: "স্নাতক (অনার্স) ৪ বছরের ডিগ্রি অথবা এইচএসসির পর ১ বছরের স্টুডিয়েনকলেগ (Studienkolleg)। সিজিপিএ ৩.৩০+ অগ্রাধিকার পায়।",
-    websiteUrl: "https://www.tum.de",
-    officialAdmissionUrl: "https://www.tum.de/en/studies/international-students",
-    highlightTag: "শীর্ষ টেকনিক্যাল • নামমাত্র টিউশন ফি",
-  },
-  {
-    id: "lmu",
-    nameEn: "Ludwig Maximilian University of Munich (LMU)",
-    nameBn: "এলএমইউ মিউনিখ বিশ্ববিদ্যালয়",
-    countryCode: "DE",
-    countryNameBn: "জার্মানি",
-    flag: "🇩🇪",
-    city: "Munich",
-    stateOrRegion: "Bavaria",
-    worldRank: 54,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "€০ (শুধুমাত্র সেমিস্টার ফি ~€১৫০)",
-    annualTuitionBdtApprox: "২০,০০০ টাকা (সেমিস্টার ফি)",
-    tuitionTier: "free",
-    topPrograms: ["পদার্থবিজ্ঞান", "অর্থনীতি ও বিজনেস", "বায়োমেডিসিন", "সোশ্যাল সায়েন্স"],
-    intakes: ["উইন্টার (Winter - অক্টোবর)"],
-    bangladeshRequirementNote: "স্নাতক স্তরে উচ্চ একাডেমিক ফলাফল (সিজিপিএ ৩.২০+) এবং সুনির্দিষ্ট বিষয়ভিত্তিক কোর্স ক্রেডিট থাকা আবশ্যক।",
-    websiteUrl: "https://www.lmu.de",
-    officialAdmissionUrl: "https://www.lmu.de/en/study/international-students/index.html",
-    highlightTag: "১০০% টিউশন ফ্রি • নোবেল বিজয়ী ঐতিহ্য",
-  },
-  {
-    id: "rwth",
-    nameEn: "RWTH Aachen University",
-    nameBn: "আরডব্লিউটিএইচ আখেন ইউনিভার্সিটি",
-    countryCode: "DE",
-    countryNameBn: "জার্মানি",
-    flag: "🇩🇪",
-    city: "Aachen",
-    stateOrRegion: "North Rhine-Westphalia",
-    worldRank: 106,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "€০ (সেমিস্টার টিকেট ফি ~€৩১৫)",
-    annualTuitionBdtApprox: "৪০,০০০ টাকা / সেমিস্টার",
-    tuitionTier: "free",
-    topPrograms: ["অটোমোটিভ ইঞ্জিনিয়ারিং", "রোবোটিক্স", "ইলেকট্রিক্যাল ইঞ্জিনিয়ারিং", "ম্যাটেরিয়াল সায়েন্স"],
-    intakes: ["উইন্টার (Winter)", "সামার (Summer)"],
-    bangladeshRequirementNote: "ইঞ্জিনিয়ারিং শিক্ষার্থীদের জন্য বিশ্বসেরা গন্তব্য। জিআরই (GRE) স্কোর বাধ্যতামূলক নয় তবে সিজিপিএ ৩.০০+ থাকা জরুরি।",
-    websiteUrl: "https://www.rwth-aachen.de",
-    officialAdmissionUrl: "https://www.rwth-aachen.de/cms/root/studium/im-studium/internationales/~bms/internationale-studierende/?lidx=1",
-    highlightTag: "ইউরোপের সেরা ইঞ্জিনিয়ারিং হাব",
-  },
-  {
-    id: "heidelberg",
-    nameEn: "Heidelberg University",
-    nameBn: "হাইডেলবার্গ বিশ্ববিদ্যালয়",
-    countryCode: "DE",
-    countryNameBn: "জার্মানি",
-    flag: "🇩🇪",
-    city: "Heidelberg",
-    stateOrRegion: "Baden-Württemberg",
-    worldRank: 87,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "€৩,০০০ / বছর",
-    annualTuitionBdtApprox: "৩,৯০,০০০ টাকা",
-    tuitionTier: "moderate",
-    topPrograms: ["মেডিসিন ও লাইফ সায়েন্স", "মলিকুলার বায়োলজি", "কম্পিউটেশনাল লিঙ্গুইস্টিকস"],
-    intakes: ["উইন্টার (Winter)"],
-    bangladeshRequirementNote: "জার্মানির প্রাচীনতম বিশ্ববিদ্যালয় (১৩৮৬)। নন-ইইউ শিক্ষার্থীদের জন্য সেমিস্টারে €১,৫০০ টিউশন ফি প্রযোজ্য।",
-    websiteUrl: "https://www.uni-heidelberg.de",
-    officialAdmissionUrl: "https://www.uni-heidelberg.de/en/study/international-students",
-    highlightTag: "প্রাচীনতম ঐতিহ্য • বিশ্বমানের গবেষণা",
-  },
+interface ProgramItem {
+  id: string;
+  titleEn: string;
+  titleBn: string;
+  degreeLevel: string;
+  subjectCategory: string;
+  department: string;
+  durationMonths: number;
+  studyMode: string;
+  annualTuitionAmount: number;
+  tuitionCurrencyCode: string;
+  approxTuitionBdt?: number;
+  prerequisitesBn?: string;
+  officialProgramUrl?: string;
+  officialSourceUrl: string;
+  university: {
+    id: string;
+    nameEn: string;
+    nameBn: string;
+    city: string;
+    countryCode: string;
+    country?: {
+      flagEmoji: string;
+      nameBn: string;
+      approxBdtRate: number;
+    };
+  };
+  admissionRequirements?: {
+    minGpaOrCgpa: number;
+    gpaScale: number;
+    minIeltsOverall: number;
+    minIeltsEachBand: number;
+    notesBn?: string;
+  };
+}
 
-  // United Kingdom
+interface FavoriteItem {
+  id: string;
+  itemType: "UNIVERSITY" | "PROGRAM";
+  universityId?: string;
+  programId?: string;
+  category: "AMBITIOUS" | "TARGET" | "SAFE";
+  notes?: string;
+  university?: any;
+  program?: any;
+}
+
+const FALLBACK_UNIVERSITIES: UniversityItem[] = [
   {
-    id: "manchester",
+    id: "tum-de",
+    nameEn: "Technical University of Munich (TUM)",
+    nameBn: "মিউনিখ টেকনিক্যাল ইউনিভার্সিটি",
+    countryCode: "DE",
+    city: "Munich",
+    stateOrProvince: "Bavaria",
+    worldRank: 28,
+    websiteUrl: "https://www.tum.de",
+    admissionsUrl: "https://www.tum.de/en/studies/application",
+    institutionType: "PUBLIC_RESEARCH",
+    accreditationDetailsBn: "জার্মানির শীর্ষ এক্সিলেন্স ইনিশিয়েটিভপ্রাপ্ত টেকনিক্যাল বিশ্ববিদ্যালয়। Anabin স্ট্যাটাস H+।",
+    recognizingAuthority: "Kultusministerkonferenz (KMK) Anabin",
+    institutionRegistryCode: "Anabin ID H+",
+    verificationStatus: "VERIFIED",
+    isRecognized: true,
+    isPublic: true,
+    officialSourceUrl: "https://www.tum.de/en/studies/international-students",
+    country: {
+      code: "DE",
+      nameEn: "Germany",
+      nameBn: "জার্মানি",
+      flagEmoji: "🇩🇪",
+      currencyCode: "EUR",
+      currencySymbol: "€",
+      approxBdtRate: 130.0,
+    },
+    _count: { programs: 1 },
+  },
+  {
+    id: "manchester-gb",
     nameEn: "University of Manchester",
     nameBn: "ম্যানচেস্টার বিশ্ববিদ্যালয়",
     countryCode: "GB",
-    countryNameBn: "যুক্তরাজ্য (ইউকে)",
-    flag: "🇬🇧",
     city: "Manchester",
-    stateOrRegion: "Greater Manchester",
-    worldRank: 32,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "£২৪,০০০ - £৩১,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৬,৮০,০০০ - ৪৭,৫০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["কম্পিউটার সায়েন্স", "অ্যারোস্পেস ইঞ্জিনিয়ারিং", "একাউন্টিং ও ফিন্যান্স", "পাবলিক হেলথ"],
-    intakes: ["সেপ্টেম্বর (Fall / Autumn)"],
-    bangladeshRequirementNote: "বাংলাদেশের ৪ বছরের স্বীকৃত স্নাতক ডিগ্রিধারীদের জন্য ন্যূনতম সিজিপিএ ৩.০০/৪.০০ (বা ফার্স্ট ক্লাস সমমান)।",
-    websiteUrl: "https://www.manchester.ac.uk",
-    officialAdmissionUrl: "https://www.manchester.ac.uk/study/international/country-specific-information/bangladesh/",
-    highlightTag: "রাসেল গ্রুপ সদস্য • ২ বছরের PSW ভিসা",
-  },
-  {
-    id: "edinburgh",
-    nameEn: "University of Edinburgh",
-    nameBn: "এডিনবরা বিশ্ববিদ্যালয়",
-    countryCode: "GB",
-    countryNameBn: "যুক্তরাজ্য (ইউকে)",
-    flag: "🇬🇧",
-    city: "Edinburgh",
-    stateOrRegion: "Scotland",
-    worldRank: 22,
-    isPublic: true,
-    minIelts: 7.0,
-    annualTuitionLocal: "£২৫,০০০ - £৩৫,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৮,০০,০০০ - ৫৩,৫০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["আর্টিফিশিয়াল ইন্টেলিজেন্স", "ডাটা সায়েন্স", "ইনফরমেটিক্স", "বায়োমেডিক্যাল সায়েন্স"],
-    intakes: ["সেপ্টেম্বর"],
-    bangladeshRequirementNote: "সিজিপিএ ৩.২৫+ এবং স্ট্রং স্টেটমেন্ট অব পারপাস (SOP) আবশ্যক। শেভেনিং স্কলারশিপের অন্যতম প্রধান পার্টনার।",
-    websiteUrl: "https://www.ed.ac.uk",
-    officialAdmissionUrl: "https://www.ed.ac.uk/studying/international",
-    highlightTag: "গ্লোবাল টপ ২৫ • স্কটল্যান্ডের ঐতিহ্য",
-  },
-  {
-    id: "bristol",
-    nameEn: "University of Bristol",
-    nameBn: "ব্রিস্টল বিশ্ববিদ্যালয়",
-    countryCode: "GB",
-    countryNameBn: "যুক্তরাজ্য (ইউকে)",
-    flag: "🇬🇧",
-    city: "Bristol",
-    stateOrRegion: "South West England",
-    worldRank: 55,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "£২২,০০০ - £২৮,৫০০ / বছর",
-    annualTuitionBdtApprox: "৩৩,৭০,০০০ - ৪৩,৭০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["সিভিল ইঞ্জিনিয়ারিং", "অর্থনীতি", "ল (Law)", "এনভায়রনমেন্টাল সায়েন্স"],
-    intakes: ["সেপ্টেম্বর"],
-    bangladeshRequirementNote: "বাংলাদেশি শিক্ষার্থীদের জন্য 'Think Big' স্কলারশিপের মাধ্যমে সর্বোচ্চ £১৩,০০০ পর্যন্ত টিউশন ওয়েভার পাওয়া সম্ভব।",
-    websiteUrl: "https://www.bristol.ac.uk",
-    officialAdmissionUrl: "https://www.bristol.ac.uk/international/countries/bangladesh.html",
-    highlightTag: "থিংক বিগ স্কলারশিপ সুবিধা",
-  },
-  {
-    id: "oxford",
-    nameEn: "University of Oxford",
-    nameBn: "অক্সফোর্ড বিশ্ববিদ্যালয়",
-    countryCode: "GB",
-    countryNameBn: "যুক্তরাজ্য (ইউকে)",
-    flag: "🇬🇧",
-    city: "Oxford",
-    stateOrRegion: "Oxfordshire",
-    worldRank: 3,
-    isPublic: true,
-    minIelts: 7.5,
-    annualTuitionLocal: "£৩১,০০০ - £৪৪,০০০ / বছর",
-    annualTuitionBdtApprox: "৪৭,৬০,০০০ - ৬৭,৫০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["পলিটিক্স ও দর্শন (PPE)", "কম্পিউটার সায়েন্স", "বায়োমেডিকেল সায়েন্স", "পাবলিক পলিসি"],
-    intakes: ["অক্টোবর"],
-    bangladeshRequirementNote: "স্নাতকে অসাধারণ সিজিপিএ (৩.৭৫+), আন্তর্জাতিক পাবলিকেশন অথবা অসাধারণ নেতৃত্বগুণ থাকা আবশ্যক।",
-    websiteUrl: "https://www.ox.ac.uk",
-    officialAdmissionUrl: "https://www.ox.ac.uk/admissions/graduate/international-students",
-    highlightTag: "বিশ্বের শীর্ষ ৩ • ক্ল্যারেনডন স্কলারশিপ",
-  },
-
-  // Canada
-  {
-    id: "toronto",
-    nameEn: "University of Toronto",
-    nameBn: "টরোন্টো বিশ্ববিদ্যালয়",
-    countryCode: "CA",
-    countryNameBn: "কানাডা",
-    flag: "🇨🇦",
-    city: "Toronto",
-    stateOrRegion: "Ontario",
-    worldRank: 21,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "CAD $৪০,০০০ - $৬০,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৪,৮০,০০০ - ৫২,২০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["মেশিন লার্নিং ও সিএস", "রোটম্যান ফিন্যান্স", "মেডিসিন", "রোবোটিক্স"],
-    intakes: ["সেপ্টেম্বর (Fall)", "জানুয়ারি (Spring)"],
-    bangladeshRequirementNote: "স্নাতকে ন্যূনতম প্রথম শ্রেণি / সিজিপিএ ৩.২০+। আইইএলটিএসে প্রতি ব্যান্ডে ন্যূনতম ৬.০ আবশ্যক। ৩ বছর PGWP ওয়ার্ক পারমিট।",
-    websiteUrl: "https://www.utoronto.ca",
-    officialAdmissionUrl: "https://future.utoronto.ca/apply/international/",
-    highlightTag: "কানাডার এক নম্বর • ৩ বছর ওয়ার্ক পারমিট",
-  },
-  {
-    id: "ubc",
-    nameEn: "University of British Columbia (UBC)",
-    nameBn: "ব্রিটিশ কলাম্বিয়া বিশ্ববিদ্যালয় (ইউবিসি)",
-    countryCode: "CA",
-    countryNameBn: "কানাডা",
-    flag: "🇨🇦",
-    city: "Vancouver",
-    stateOrRegion: "British Columbia",
     worldRank: 34,
+    websiteUrl: "https://www.manchester.ac.uk",
+    admissionsUrl: "https://www.manchester.ac.uk/study/international/admissions/",
+    institutionType: "PUBLIC_RESEARCH",
+    accreditationDetailsBn: "যুক্তরাজ্যের রয়্যাল চার্টার প্রাপ্ত ও রাসেল গ্রুপভুক্ত সরকারি গবেষণা বিশ্ববিদ্যালয়। HESA স্বীকৃত।",
+    recognizingAuthority: "UK Office for Students / HESA",
+    institutionRegistryCode: "UKPRN 10007798",
+    verificationStatus: "VERIFIED",
+    isRecognized: true,
     isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "CAD $৩৮,০০০ - $৫০,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৩,০০,০০০ - ৪৩,৫০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["সফটওয়্যার ইঞ্জিনিয়ারিং", "ফরেস্ট্রি", "আন্তর্জাতিক সম্পর্ক", "ডাটা সায়েন্স"],
-    intakes: ["সেপ্টেম্বর", "জানুয়ারি"],
-    bangladeshRequirementNote: "স্নাতক ও স্নাতকোত্তর উভয়ের জন্য ফুল-ফান্ডেড ও আংশিক স্কলারশিপ (International Major Entrance Scholarship) রয়েছে।",
-    websiteUrl: "https://www.ubc.ca",
-    officialAdmissionUrl: "https://you.ubc.ca/applying-ubc/international-high-schools-requirements/",
-    highlightTag: "ভ্যাঙ্কুভার উপকূল • সমৃদ্ধ রিসার্চ হাব",
+    officialSourceUrl: "https://www.manchester.ac.uk/study/international/country-specific-information/bangladesh/",
+    country: {
+      code: "GB",
+      nameEn: "United Kingdom",
+      nameBn: "যুক্তরাজ্য",
+      flagEmoji: "🇬🇧",
+      currencyCode: "GBP",
+      currencySymbol: "£",
+      approxBdtRate: 153.5,
+    },
+    _count: { programs: 2 },
   },
   {
-    id: "waterloo",
-    nameEn: "University of Waterloo",
-    nameBn: "ওয়াটারলু বিশ্ববিদ্যালয়",
+    id: "toronto-ca",
+    nameEn: "University of Toronto",
+    nameBn: "টরন্টো বিশ্ববিদ্যালয়",
     countryCode: "CA",
-    countryNameBn: "কানাডা",
-    flag: "🇨🇦",
-    city: "Waterloo",
-    stateOrRegion: "Ontario",
-    worldRank: 112,
+    city: "Toronto",
+    stateOrProvince: "Ontario",
+    worldRank: 21,
+    websiteUrl: "https://www.utoronto.ca",
+    admissionsUrl: "https://future.utoronto.ca/apply/",
+    institutionType: "PUBLIC_RESEARCH",
+    accreditationDetailsBn: "কানাডার শীর্ষস্থানীয় সরকারি প্রতিষ্ঠান। IRCC ভেরিফাইড DLI প্রতিষ্ঠান।",
+    recognizingAuthority: "IRCC Canada",
+    institutionRegistryCode: "DLI # O19332718824",
+    verificationStatus: "VERIFIED",
+    isRecognized: true,
     isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "CAD $৩৬,০০০ - $৪৮,০০০ / বছর",
-    annualTuitionBdtApprox: "৩১,৩০,০০০ - ৪১,৭৫,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["কম্পিউটার সায়েন্স (কো-অপ)", "সফটওয়্যার ইঞ্জিনিয়ারিং", "অ্যাকচুয়ারি সায়েন্স", "কোয়ান্টাম কম্পিউটিং"],
-    intakes: ["সেপ্টেম্বর", "জানুয়ারি"],
-    bangladeshRequirementNote: "বিশ্বখ্যাত Co-op প্রোগ্রামের মাধ্যমে পড়াশোনাকালীন সময়েই উত্তর আমেরিকার শীর্ষ টেক কোম্পানিতে ইন্টার্নশিপ ও উপার্জনের সুযোগ।",
-    websiteUrl: "https://uwaterloo.ca",
-    officialAdmissionUrl: "https://uwaterloo.ca/future-students/international-students",
-    highlightTag: "বিশ্বের বৃহত্তম Co-op ইন্টার্নশিপ প্রোগ্রাম",
+    officialSourceUrl: "https://future.utoronto.ca/international-students/",
+    country: {
+      code: "CA",
+      nameEn: "Canada",
+      nameBn: "কানাডা",
+      flagEmoji: "🇨🇦",
+      currencyCode: "CAD",
+      currencySymbol: "C$",
+      approxBdtRate: 87.0,
+    },
+    _count: { programs: 1 },
   },
   {
-    id: "alberta",
-    nameEn: "University of Alberta",
-    nameBn: "অ্যালবার্টা বিশ্ববিদ্যালয়",
-    countryCode: "CA",
-    countryNameBn: "কানাডা",
-    flag: "🇨🇦",
-    city: "Edmonton",
-    stateOrRegion: "Alberta",
-    worldRank: 111,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "CAD $২৯,০০০ - $৩৭,০০০ / বছর",
-    annualTuitionBdtApprox: "২৫,২০,০০০ - ৩২,১৯,০০০ টাকা",
-    tuitionTier: "moderate",
-    topPrograms: ["পেট্রোলিয়াম ও মাইন ইঞ্জিনিয়ারিং", "এগ্রিকালচারাল সায়েন্স", "এআই ও রিইনফোর্সমেন্ট লার্নিং"],
-    intakes: ["সেপ্টেম্বর"],
-    bangladeshRequirementNote: "অ্যালবার্টা প্রদেশে তুলনামূলক কম ট্যাক্স ও সস্তা জীবনযাত্রার ব্যয়। আন্তর্জাতিক শিক্ষার্থীদের জন্য মেধা স্কলারশিপ সহজলভ্য।",
-    websiteUrl: "https://www.ualberta.ca",
-    officialAdmissionUrl: "https://www.ualberta.ca/admissions/international/index.html",
-    highlightTag: "কম লিভিং কস্ট • মেধা স্কলারশিপ",
-  },
-
-  // Australia
-  {
-    id: "melbourne",
+    id: "melbourne-au",
     nameEn: "University of Melbourne",
     nameBn: "মেলবোর্ন বিশ্ববিদ্যালয়",
     countryCode: "AU",
-    countryNameBn: "অস্ট্রেলিয়া",
-    flag: "🇦🇺",
     city: "Melbourne",
-    stateOrRegion: "Victoria",
+    stateOrProvince: "Victoria",
     worldRank: 13,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "AUD $৪২,০০০ - $৫০,০০০ / বছর",
-    annualTuitionBdtApprox: "৩২,৯০,০০০ - ৩৯,২০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["ইনফরমেশন টেকনোলজি", "বায়োমেডিক্যাল ইঞ্জিনিয়ারিং", "বিজনেস ম্যানেজমেন্ট", "আর্কিটেকচার"],
-    intakes: ["ফেব্রুয়ারি (Semester 1)", "জুলাই (Semester 2)"],
-    bangladeshRequirementNote: "গ্রুপ অব এইট (Go8) সদস্য। ডিগ্রি শেষে মেলবোর্নে ২ বছরের সাবক্লাস ৪৮৫ পোস্ট-স্টাডি ওয়ার্ক ভিসা।",
     websiteUrl: "https://www.unimelb.edu.au",
-    officialAdmissionUrl: "https://study.unimelb.edu.au/how-to-apply/international-applications",
-    highlightTag: "অস্ট্রেলিয়ার এক নম্বর • গ্রুপ অব এইট",
-  },
-  {
-    id: "sydney",
-    nameEn: "University of Sydney",
-    nameBn: "সিডনি বিশ্ববিদ্যালয়",
-    countryCode: "AU",
-    countryNameBn: "অস্ট্রেলিয়া",
-    flag: "🇦🇺",
-    city: "Sydney",
-    stateOrRegion: "New South Wales",
-    worldRank: 19,
+    admissionsUrl: "https://study.unimelb.edu.au/how-to-apply",
+    institutionType: "PUBLIC_RESEARCH",
+    accreditationDetailsBn: "অস্ট্রেলিয়ার শীর্ষ পাবলিক গবেষণা বিশ্ববিদ্যালয়। TEQSA ও CRICOS অনুমোদিত।",
+    recognizingAuthority: "TEQSA Australia",
+    institutionRegistryCode: "CRICOS Provider 00116K",
+    verificationStatus: "VERIFIED",
+    isRecognized: true,
     isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "AUD $৪৫,০০০ - $৫২,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৫,৩০,০০০ - ৪০,৮০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["প্রজেক্ট ম্যানেজমেন্ট", "ডাটা সায়েন্স", "ফার্মাসি", "ফিন্যান্স"],
-    intakes: ["ফেব্রুয়ারি", "জুলাই"],
-    bangladeshRequirementNote: "স্নাতক সিজিপিএ ৩.০০+ এবং ২০% পর্যন্ত আন্তর্জাতিক স্কলারশিপের সুযোগ রয়েছে।",
-    websiteUrl: "https://www.sydney.edu.au",
-    officialAdmissionUrl: "https://www.sydney.edu.au/study/applying/how-to-apply/international-students.html",
-    highlightTag: "বিশ্বের শীর্ষ ২০ • অসাধারণ ক্যারিয়ার আউটকাম",
+    officialSourceUrl: "https://study.unimelb.edu.au/how-to-apply/international-applications",
+    country: {
+      code: "AU",
+      nameEn: "Australia",
+      nameBn: "অস্ট্রেলিয়া",
+      flagEmoji: "🇦🇺",
+      currencyCode: "AUD",
+      currencySymbol: "A$",
+      approxBdtRate: 78.5,
+    },
+    _count: { programs: 1 },
   },
   {
-    id: "unsw",
-    nameEn: "UNSW Sydney",
-    nameBn: "নিউ সাউথ ওয়েলস বিশ্ববিদ্যালয় (ইউএনএসডব্লিউ)",
-    countryCode: "AU",
-    countryNameBn: "অস্ট্রেলিয়া",
-    flag: "🇦🇺",
-    city: "Sydney",
-    stateOrRegion: "New South Wales",
-    worldRank: 19,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "AUD $৪৪,০০০ - $৫৩,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৪,৫০,০০০ - ৪১,৬০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["রিনিউয়েবল এনার্জি", "সিভিল ও স্ট্রাকচারাল", "সফটওয়্যার সিস্টেমস"],
-    intakes: ["ফেব্রুয়ারি (Term 1)", "জুন (Term 2)", "সেপ্টেম্বর (Term 3)"],
-    bangladeshRequirementNote: "ইউএনএসডব্লিউ-এর ৩-টার্ম সিস্টেম থাকায় বছরে ৩ বার শুরু করার সুযোগ পাওয়া যায়।",
-    websiteUrl: "https://www.unsw.edu.au",
-    officialAdmissionUrl: "https://www.unsw.edu.au/study/how-to-apply/international",
-    highlightTag: "ইঞ্জিনিয়ারিং ও এন্টারপ্রেনারশিপ লিডার",
-  },
-
-  // United States
-  {
-    id: "asu",
-    nameEn: "Arizona State University",
-    nameBn: "অ্যারিজোনা স্টেট ইউনিভার্সিটি",
+    id: "umich-us",
+    nameEn: "University of Michigan",
+    nameBn: "মিশিগান বিশ্ববিদ্যালয়",
     countryCode: "US",
-    countryNameBn: "যুক্তরাষ্ট্র (ইউএসএ)",
-    flag: "🇺🇸",
-    city: "Tempe / Phoenix",
-    stateOrRegion: "Arizona",
-    worldRank: 150,
+    city: "Ann Arbor",
+    stateOrProvince: "Michigan",
+    worldRank: 33,
+    websiteUrl: "https://umich.edu",
+    admissionsUrl: "https://rackham.umich.edu/admissions/",
+    institutionType: "PUBLIC_RESEARCH",
+    accreditationDetailsBn: "যুক্তরাষ্ট্রের শীর্ষ পাবলিক আইভি বিশ্ববিদ্যালয়। HLC এবং SEVP অনুমোদিত।",
+    recognizingAuthority: "Higher Learning Commission / SEVP",
+    institutionRegistryCode: "SEVP DET214F00388000",
+    verificationStatus: "VERIFIED",
+    isRecognized: true,
     isPublic: true,
-    minIelts: 6.0,
-    annualTuitionLocal: "USD $৩১,০০০ - $৩৬,০০০ / বছর",
-    annualTuitionBdtApprox: "৩৭,৯৭,০০০ - ৪৪,১০,০০০ টাকা",
-    tuitionTier: "moderate",
-    topPrograms: ["ইনোভেশন ও এন্টারপ্রেনারশিপ", "কম্পিউটার সায়েন্স", "সাপ্লাই চেইন", "আইটি সিকিউরিটি"],
-    intakes: ["আগস্ট (Fall)", "জানুয়ারি (Spring)"],
-    bangladeshRequirementNote: "আইইএলটিএস ৬.০ গ্রহণযোগ্য। বাংলাদেশি স্নাতক শিক্ষার্থীদের জন্য সর্বোচ্চ $১৫,০০০/বছর পর্যন্ত New American University স্কলারশিপ প্রদান করে।",
-    websiteUrl: "https://www.asu.edu",
-    officialAdmissionUrl: "https://admission.asu.edu/international",
-    highlightTag: "আইইএলটিএস ৬.০ গ্রহণ • আকর্ষণীয় স্কলারশিপ",
-  },
-  {
-    id: "purdue",
-    nameEn: "Purdue University",
-    nameBn: "পারডু বিশ্ববিদ্যালয়",
-    countryCode: "US",
-    countryNameBn: "যুক্তরাষ্ট্র (ইউএসএ)",
-    flag: "🇺🇸",
-    city: "West Lafayette",
-    stateOrRegion: "Indiana",
-    worldRank: 99,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "USD $৩১,১০০ / বছর",
-    annualTuitionBdtApprox: "৩৮,১০,০০০ টাকা",
-    tuitionTier: "moderate",
-    topPrograms: ["মেকানিক্যাল", "অ্যারোস্পেস ইঞ্জিনিয়ারিং", "কম্পিউটার সায়েন্স", "এগ্রিকালচারাল বায়োটেক"],
-    intakes: ["আগস্ট (Fall)"],
-    bangladeshRequirementNote: "গত ১২ বছর ধরে কোনো টিউশন ফি বাড়ায়নি (ফ্রিজড রেট)। STEM ডিগ্রির জন্য ৩৬ মাসের দীর্ঘ OPT কাজের সুযোগ।",
-    websiteUrl: "https://www.purdue.edu",
-    officialAdmissionUrl: "https://www.purdue.edu/admissions/international/apply/",
-    highlightTag: "১২ বছর ধরে ফ্রোজেন টিউশন ফি • শীর্ষ STEM",
-  },
-  {
-    id: "utaustin",
-    nameEn: "University of Texas at Austin",
-    nameBn: "ইউনিভার্সিটি অব টেক্সাস অ্যাট অস্টিন",
-    countryCode: "US",
-    countryNameBn: "যুক্তরাষ্ট্র (ইউএসএ)",
-    flag: "🇺🇸",
-    city: "Austin",
-    stateOrRegion: "Texas",
-    worldRank: 58,
-    isPublic: true,
-    minIelts: 6.5,
-    annualTuitionLocal: "USD $৩৮,০০০ - $৪৬,০০০ / বছর",
-    annualTuitionBdtApprox: "৪৬,৫৫,০০০ - ৫৬,৩৫,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["কম্পিউটার সিস্টেমস", "পেট্রোলিয়াম ইঞ্জিনিয়ারিং", "ম্যাককম্বস বিজনেস স্কুল"],
-    intakes: ["আগস্ট (Fall)"],
-    bangladeshRequirementNote: "অস্টিনকে বলা হয় সিলিকন হিলস—টেসলা, অ্যাপল, গুগল হাব থাকায় বিপুল ইন্টার্নশিপ ও চাকরির সুযোগ।",
-    websiteUrl: "https://www.utexas.edu",
-    officialAdmissionUrl: "https://admissions.utexas.edu/apply/international-students",
-    highlightTag: "সিলিকন হিলসের কেন্দ্রবিন্দু",
-  },
-  {
-    id: "harvard",
-    nameEn: "Harvard University",
-    nameBn: "হার্ভার্ড বিশ্ববিদ্যালয়",
-    countryCode: "US",
-    countryNameBn: "যুক্তরাষ্ট্র (ইউএসএ)",
-    flag: "🇺🇸",
-    city: "Cambridge",
-    stateOrRegion: "Massachusetts",
-    worldRank: 4,
-    isPublic: false,
-    minIelts: 7.5,
-    annualTuitionLocal: "USD $৫৪,০০০ - $৬০,০০০ / বছর",
-    annualTuitionBdtApprox: "৬৬,১৫,০০০ - ৭৩,৫০,০০০ টাকা",
-    tuitionTier: "standard",
-    topPrograms: ["পাবলিক পলিসি (কেনেডি স্কুল)", "ল (Law)", "বায়োমেডিক্যাল সায়েন্স", "এমবিএ"],
-    intakes: ["আগস্ট (Fall)"],
-    bangladeshRequirementNote: "Need-Blind ফাইনান্সিয়াল এইড: যোগ্য প্রার্থী নির্বাচিত হলে পরিবারের আয় অনুযায়ী টিউশন ও থাকা-খাওয়ার শতভাগ খরচ মওকুফ হতে পারে।",
-    websiteUrl: "https://www.harvard.edu",
-    officialAdmissionUrl: "https://www.harvard.edu/admissions-aid/",
-    highlightTag: "আইভি লিগ • Need-Blind ১০০% আর্থিক অনুদান",
+    officialSourceUrl: "https://internationalcenter.umich.edu/",
+    country: {
+      code: "US",
+      nameEn: "United States",
+      nameBn: "যুক্তরাষ্ট্র",
+      flagEmoji: "🇺🇸",
+      currencyCode: "USD",
+      currencySymbol: "$",
+      approxBdtRate: 122.5,
+    },
+    _count: { programs: 1 },
   },
 ];
 
-export default function UniversitiesPage() {
+export default function UniversitiesDiscoveryPage() {
+  const [activeTab, setActiveTab] = useState<"universities" | "programs" | "shortlist">("universities");
+  const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("ALL");
-  const [selectedTier, setSelectedTier] = useState<string>("ALL");
-  const [showBdtOnly, setShowBdtOnly] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedDegree, setSelectedDegree] = useState<string>("ALL");
+  const [selectedSubject, setSelectedSubject] = useState<string>("ALL");
+  const [selectedBudgetTier, setSelectedBudgetTier] = useState<string>("ALL");
+  const [onlyPublic, setOnlyPublic] = useState(false);
 
-  const countryFilterOptions = [
-    { code: "ALL", label: "সকল দেশ", flag: "🌍" },
-    { code: "DE", label: "জার্মানি", flag: "🇩🇪" },
-    { code: "GB", label: "যুক্তরাজ্য", flag: "🇬🇧" },
-    { code: "CA", label: "কানাডা", flag: "🇨🇦" },
-    { code: "AU", label: "অস্ট্রেলিয়া", flag: "🇦🇺" },
-    { code: "US", label: "যুক্তরাষ্ট্র", flag: "🇺🇸" },
-  ];
+  const [universities, setUniversities] = useState<UniversityItem[]>(FALLBACK_UNIVERSITIES);
+  const [programs, setPrograms] = useState<ProgramItem[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  // Fetch initial data
+  useEffect(() => {
+    async function loadDiscoveryData() {
+      try {
+        setLoading(true);
+        // Load Universities
+        const uniRes = await fetch("/api/discovery/universities?limit=50");
+        const uniJson = await uniRes.json();
+        if (uniJson.success && uniJson.data?.length > 0) {
+          setUniversities(uniJson.data);
+        }
+
+        // Load Programs
+        const progRes = await fetch("/api/discovery/programs?limit=50");
+        const progJson = await progRes.json();
+        if (progJson.success && progJson.data?.length > 0) {
+          setPrograms(progJson.data);
+        }
+
+        // Load Favorites
+        const favRes = await fetch("/api/favorites");
+        const favJson = await favRes.json();
+        if (favJson.success && favJson.data) {
+          setFavorites(favJson.data);
+        }
+      } catch (err) {
+        console.error("Discovery fetch error, using fallbacks:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDiscoveryData();
+  }, []);
+
+  // Filter Universities
   const filteredUniversities = useMemo(() => {
-    return UNIVERSITIES_DATA.filter((uni) => {
-      // Country filter
-      if (selectedCountry !== "ALL" && uni.countryCode !== selectedCountry) {
-        return false;
-      }
-      // Tuition tier filter
-      if (selectedTier === "free" && uni.tuitionTier !== "free") {
-        return false;
-      }
-      if (selectedTier === "moderate" && uni.tuitionTier === "standard") {
-        return false;
-      }
-      // Search query
+    return universities.filter((u) => {
+      if (selectedCountry !== "ALL" && u.countryCode !== selectedCountry) return false;
+      if (onlyPublic && !u.isPublic) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesName =
-          uni.nameEn.toLowerCase().includes(q) ||
-          uni.nameBn.toLowerCase().includes(q) ||
-          uni.city.toLowerCase().includes(q) ||
-          uni.countryNameBn.toLowerCase().includes(q) ||
-          uni.topPrograms.some((p) => p.toLowerCase().includes(q));
-        if (!matchesName) return false;
+        const matchesName = u.nameEn.toLowerCase().includes(q) || u.nameBn.includes(q);
+        const matchesCity = u.city.toLowerCase().includes(q);
+        if (!matchesName && !matchesCity) return false;
       }
       return true;
     });
-  }, [searchQuery, selectedCountry, selectedTier]);
+  }, [universities, selectedCountry, onlyPublic, searchQuery]);
+
+  // Filter Programs
+  const filteredPrograms = useMemo(() => {
+    return programs.filter((p) => {
+      if (selectedCountry !== "ALL" && p.university?.countryCode !== selectedCountry) return false;
+      if (selectedDegree !== "ALL" && p.degreeLevel !== selectedDegree) return false;
+      if (selectedSubject !== "ALL" && p.subjectCategory !== selectedSubject) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = p.titleEn.toLowerCase().includes(q) || p.titleBn.includes(q);
+        const matchesUni = p.university.nameEn.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesUni) return false;
+      }
+      if (selectedBudgetTier === "free") {
+        if (p.annualTuitionAmount > 0) return false;
+      } else if (selectedBudgetTier === "under_20l") {
+        if ((p.approxTuitionBdt || 0) > 2000000 || p.annualTuitionAmount === 0) return false;
+      } else if (selectedBudgetTier === "under_35l") {
+        if ((p.approxTuitionBdt || 0) > 3500000 || (p.approxTuitionBdt || 0) < 2000000) return false;
+      } else if (selectedBudgetTier === "above_35l") {
+        if ((p.approxTuitionBdt || 0) <= 3500000) return false;
+      }
+      return true;
+    });
+  }, [programs, selectedCountry, selectedDegree, selectedSubject, selectedBudgetTier, searchQuery]);
+
+  // Handle Save to Shortlist
+  const handleToggleFavorite = async (itemType: "UNIVERSITY" | "PROGRAM", targetId: string, category: "AMBITIOUS" | "TARGET" | "SAFE" = "TARGET") => {
+    const existing = favorites.find((f) =>
+      itemType === "UNIVERSITY" ? f.universityId === targetId : f.programId === targetId
+    );
+
+    if (existing) {
+      // Remove
+      try {
+        const res = await fetch(`/api/favorites/${existing.id}`, { method: "DELETE" });
+        if (res.ok) {
+          setFavorites(favorites.filter((f) => f.id !== existing.id));
+          setActionSuccess("শর্টলিস্ট থেকে সরানো হয়েছে।");
+          setTimeout(() => setActionSuccess(null), 3000);
+        }
+      } catch (err) {
+        console.error("Remove favorite error:", err);
+      }
+    } else {
+      // Add
+      try {
+        const res = await fetch("/api/favorites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemType, targetId, category }),
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          setFavorites([json.data, ...favorites]);
+          setActionSuccess("শর্টলিস্টে সফলভাবে যুক্ত হয়েছে!");
+          setTimeout(() => setActionSuccess(null), 3000);
+        } else {
+          alert(json.error || "শর্টলিস্টে যোগ করতে লগইন করুন।");
+        }
+      } catch (err) {
+        console.error("Add favorite error:", err);
+      }
+    }
+  };
+
+  const isFavorited = (itemType: "UNIVERSITY" | "PROGRAM", targetId: string) => {
+    return favorites.some((f) =>
+      itemType === "UNIVERSITY" ? f.universityId === targetId : f.programId === targetId
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      {/* Header Banner */}
-      <section className="bg-gradient-to-b from-brand-50/80 via-white to-slate-50 pt-12 pb-14 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-900 text-xs font-semibold mb-4 border border-brand-200">
-              <ShieldCheck className="w-4 h-4 text-brand-700" />
-              <span>১০০% অফিসিয়াল সরকারি ও বিশ্ববিদ্যালয় পোর্টাল লিঙ্কিং</span>
+    <div className="space-y-8 pb-16">
+      {/* 1. Header Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 rounded-3xl p-6 sm:p-10 text-white shadow-xl">
+        <div className="relative z-10 max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-700/60 border border-brand-500/30 text-brand-200 text-xs font-semibold backdrop-blur-xs">
+            <Sparkles className="w-3.5 h-3.5 text-brand-300" />
+            <span>শতভাগ সরকারি রেজিস্ট্রেশন ও অফিসিয়াল অ্যাক্রিডিটেশন ভেরিফাইড</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+            বিশ্ববিদ্যালয় ও প্রোগ্রাম ডিসকভারি ডিরেক্টরি
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            কোনো এজেন্ট বা দালালের মিথ্যা আশ্বাস ছাড়া ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও যুক্তরাষ্ট্রের শীর্ষ বিশ্ববিদ্যালয়সমূহের অফিসিয়াল তথ্য, বাস্তব টিউশন ফি (টাকায় কনভার্টকৃত), এবং আইইএলটিএস যোগ্যতা যাচাই করুন।
+          </p>
+        </div>
+      </div>
+
+      {/* Global Action Toast */}
+      {actionSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-950 text-xs sm:text-sm flex items-center gap-3 shadow-xs animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span className="font-semibold">{actionSuccess}</span>
+        </div>
+      )}
+
+      {/* 2. Top Navigation Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab("universities")}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+              activeTab === "universities"
+                ? "bg-brand-700 text-white shadow-xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>বিশ্ববিদ্যালয় ক্যাটালগ ({filteredUniversities.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("programs")}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+              activeTab === "programs"
+                ? "bg-brand-700 text-white shadow-xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>প্রোগ্রাম ডিরেক্টরি ({filteredPrograms.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("shortlist")}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+              activeTab === "shortlist"
+                ? "bg-amber-600 text-white shadow-xs"
+                : "bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            <BookmarkCheck className="w-4 h-4" />
+            <span>আমার শর্টলিস্ট ({favorites.length})</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>HESA • DLI • CRICOS • Anabin ভেরিফাইড</span>
+        </div>
+      </div>
+
+      {/* 3. Search & Multi-Faceted Filters (Rendered when in catalog or programs tab) */}
+      {activeTab !== "shortlist" && (
+        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="বিশ্ববিদ্যালয়, শহর বা বিষয়ের নাম দিয়ে খুঁজুন (যেমন: Manchester, Toronto, AI)..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
+              />
             </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-950 tracking-tight">
-              শীর্ষ আন্তর্জাতিক <span className="text-brand-700">বিশ্ববিদ্যালয় ক্যাটালগ</span>
-            </h1>
-            <p className="mt-3 text-base sm:text-lg text-slate-600 leading-relaxed">
-              ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও যুক্তরাষ্ট্রের শীর্ষ পাবলিক প্রতিষ্ঠানসমূহের এন্ট্রি রিকোয়ারমেন্টস, আইইএলটিএস কাট-অফ এবং বাংলাদেশি কারিকুলামের প্রযোজ্য শর্তাবলী খুঁজুন।
-            </p>
+
+            {/* Public/Private Toggle */}
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={onlyPublic}
+                  onChange={(e) => setOnlyPublic(e.target.checked)}
+                  className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
+                />
+                <span>শুধু সরকারি / পাবলিক প্রতিষ্ঠান</span>
+              </label>
+            </div>
           </div>
 
-          {/* Search Bar & Primary Filters */}
-          <div className="mt-8 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex flex-col md:flex-row gap-3">
-              {/* Search text field */}
-              <div className="relative flex-1">
-                <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="বিশ্ববিদ্যালয়ের নাম, শহর, বা বিষয় (যেমন: কম্পিউটার সায়েন্স, মেকানিক্যাল)..."
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 bg-slate-50/50 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:bg-white text-slate-900 placeholder:text-slate-400"
-                />
-              </div>
-
-              {/* Tuition mode filter */}
-              <select
-                value={selectedTier}
-                onChange={(e) => setSelectedTier(e.target.value)}
-                className="py-3 px-4 rounded-xl border border-slate-300 bg-slate-50/50 text-sm font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="ALL">সকল টিউশন ফি ক্যাটাগরি</option>
-                <option value="free">টিউশন ফ্রি (জার্মানি পাবলিক)</option>
-                <option value="moderate">লো-কস্ট / সাশ্রয়ী বাজেট</option>
-              </select>
-
-              {/* Currency View Switcher */}
+          {/* Filter Pills */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            {/* Country Selector */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-2">দেশ:</span>
               <button
-                type="button"
-                onClick={() => setShowBdtOnly(!showBdtOnly)}
-                className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                  showBdtOnly
-                    ? "bg-brand-50 border-brand-500 text-brand-800"
-                    : "bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100"
+                onClick={() => setSelectedCountry("ALL")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                  selectedCountry === "ALL"
+                    ? "bg-slate-900 text-white border-slate-900"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                 }`}
               >
-                <DollarSign className="w-4 h-4 text-brand-700" />
-                <span>{showBdtOnly ? "টাকায় হিসাব চালু" : "টাকায় আনুমানিক হিসাব"}</span>
+                সকল দেশ (৫)
               </button>
-            </div>
-
-            {/* Country Pill Selector */}
-            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5" />
-                <span>দেশ ফিল্টার:</span>
-              </span>
-              {countryFilterOptions.map((c) => (
+              {COUNTRY_LIST.map((c) => (
                 <button
                   key={c.code}
                   onClick={() => setSelectedCountry(c.code)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${
                     selectedCountry === c.code
-                      ? "bg-brand-700 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      ? "bg-brand-700 text-white border-brand-700 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                   }`}
                 >
                   <span>{c.flag}</span>
-                  <span>{c.label}</span>
+                  <span>{c.nameBn}</span>
                 </button>
               ))}
             </div>
+
+            {/* Degree Level Selector (Shown for programs) */}
+            {activeTab === "programs" && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-2">ডিগ্রি:</span>
+                {[
+                  { id: "ALL", label: "সকল ডিগ্রি" },
+                  { id: "BACHELOR", label: "ব্যাচেলর (Bachelor)" },
+                  { id: "MASTER", label: "মাস্টার্স (Master's)" },
+                  { id: "PHD", label: "পিএইচডি (PhD)" },
+                ].map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setSelectedDegree(d.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                      selectedDegree === d.id
+                        ? "bg-brand-700 text-white border-brand-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Budget Selector in BDT */}
+            {activeTab === "programs" && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-2">টিউশন বাজেট (টাকায়):</span>
+                {[
+                  { id: "ALL", label: "সকল বাজেট" },
+                  { id: "free", label: "টিউশন ফ্রি (€০ জার্মানি)" },
+                  { id: "under_20l", label: "২০ লাখের নিচে" },
+                  { id: "under_35l", label: "২০ থেকে ৩৫ লাখ" },
+                  { id: "above_35l", label: "৩৫ লাখের বেশি" },
+                ].map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => setSelectedBudgetTier(b.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                      selectedBudgetTier === b.id
+                        ? "bg-teal-700 text-white border-teal-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </section>
+      )}
 
-      {/* Main Catalog Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* Results status counter */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-sm font-medium text-slate-600">
-            মোট <span className="font-bold text-brand-700">{filteredUniversities.length}</span> টি সরকারি ও ভেরিফাইড প্রতিষ্ঠান পাওয়া গেছে
-          </div>
-          <div className="text-xs text-slate-400 hidden sm:block">
-            * টিউশন ফি ও এন্ট্রি রিকোয়ারমেন্ট অফিসিয়াল পোর্টাল অনুযায়ী প্রতি সেশনে পরিবর্তিত হতে পারে
-          </div>
-        </div>
-
-        {/* Universities Grid */}
-        {filteredUniversities.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-lg mx-auto">
-            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-800">কোনো বিশ্ববিদ্যালয় খুঁজে পাওয়া যায়নি</h3>
-            <p className="text-sm text-slate-500 mt-1">
-              অনুগ্রহ করে অন্য কোনো নাম বা ফিল্টার ব্যবহার করে আবার চেষ্টা করুন।
-            </p>
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCountry("ALL");
-                setSelectedTier("ALL");
-              }}
-              className="mt-4 px-4 py-2 bg-brand-700 text-white text-xs font-bold rounded-lg"
-            >
-              সব ফিল্টার রিসেট করুন
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* 4. Tab: Universities View */}
+      {activeTab === "universities" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredUniversities.map((uni) => {
-              const isExpanded = expandedId === uni.id;
+              const favorited = isFavorited("UNIVERSITY", uni.id);
               return (
                 <div
                   key={uni.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden"
+                  className="bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
                 >
-                  {/* Card Header */}
-                  <div className="p-6 pb-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-lg">{uni.flag}</span>
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                            {uni.countryNameBn}
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-slate-400" />
-                            {uni.city}, {uni.stateOrRegion}
-                          </span>
-                        </div>
-                        <h2 className="text-lg font-bold text-slate-900 group-hover:text-brand-700">
-                          {uni.nameBn}
-                        </h2>
-                        <h3 className="text-xs text-slate-500 font-medium">{uni.nameEn}</h3>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
-                          <Award className="w-3.5 h-3.5 text-amber-600" />
-                          <span>QS #{uni.worldRank}</span>
+                  <div className="p-6 space-y-4">
+                    {/* Top Badges */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{uni.country?.flagEmoji || "🌍"}</span>
+                        <span className="text-xs font-bold text-slate-600">
+                          {uni.country?.nameBn || uni.countryCode}
                         </span>
                       </div>
-                    </div>
 
-                    {/* Tag badge */}
-                    <div className="mt-3">
-                      <span className="inline-block text-[11px] font-semibold text-brand-800 bg-brand-50 px-2.5 py-1 rounded border border-brand-200">
-                        {uni.highlightTag}
-                      </span>
-                    </div>
-
-                    {/* Key Stats Row */}
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
-                      <div>
-                        <span className="text-slate-500 block text-[11px]">বার্ষিক টিউশন ফি:</span>
-                        <span className="font-bold text-slate-900 block truncate">
-                          {showBdtOnly ? uni.annualTuitionBdtApprox : uni.annualTuitionLocal}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[11px]">ন্যূনতম IELTS:</span>
-                        <span className="font-bold text-slate-900 block">{uni.minIelts} সামগ্রিক</span>
-                      </div>
-                      <div className="col-span-2 sm:col-span-1">
-                        <span className="text-slate-500 block text-[11px]">ইনটেকসমূহ:</span>
-                        <span className="font-bold text-slate-900 block truncate">{uni.intakes[0]}</span>
-                      </div>
-                    </div>
-
-                    {/* Popular Subjects */}
-                    <div className="mt-4">
-                      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        জনপ্রিয় প্রোগ্রামসমূহ:
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {uni.topPrograms.map((p, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium"
-                          >
-                            {p}
+                      <div className="flex items-center gap-1.5">
+                        {uni.worldRank && (
+                          <span className="px-2 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-[11px] font-bold">
+                            QS #{uni.worldRank}
                           </span>
-                        ))}
+                        )}
+                        <button
+                          onClick={() => handleToggleFavorite("UNIVERSITY", uni.id)}
+                          className={`p-1.5 rounded-lg border transition-all ${
+                            favorited
+                              ? "bg-amber-500 text-white border-amber-500"
+                              : "bg-slate-50 text-slate-400 border-slate-200 hover:text-amber-600"
+                          }`}
+                          title="শর্টলিস্টে যুক্ত করুন"
+                        >
+                          <Bookmark className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
-                    {/* Expandable Bangladesh Criteria note */}
-                    {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-600 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/60">
-                        <div className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                          <Info className="w-3.5 h-3.5 text-brand-700" />
-                          <span>বাংলাদেশি শিক্ষার্থীদের জন্য বিশেষ শর্তাবলী:</span>
-                        </div>
-                        <p className="leading-relaxed">{uni.bangladeshRequirementNote}</p>
+                    {/* University Name */}
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-700 transition-colors">
+                        {uni.nameBn}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">{uni.nameEn}</p>
+                    </div>
+
+                    {/* City & State */}
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{uni.city}{uni.stateOrProvince ? `, ${uni.stateOrProvince}` : ""}</span>
+                    </div>
+
+                    {/* Official Accreditation Notice */}
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{uni.recognizingAuthority || "অফিসিয়াল সরকারি স্বীকৃতিপ্রাপ্ত"}</span>
                       </div>
-                    )}
+                      <p className="text-[11px] text-slate-600 line-clamp-2">
+                        {uni.accreditationDetailsBn || "অফিসিয়াল সরকারি উচ্চশিক্ষা ডাটাবেজে অন্তর্ভুক্ত।"}
+                      </p>
+                      {uni.institutionRegistryCode && (
+                        <p className="text-[10px] font-mono text-slate-500 pt-1">
+                          রেজিস্ট্রি কোড: {uni.institutionRegistryCode}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Card Actions Footer */}
-                  <div className="px-6 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : uni.id)}
-                      className="font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1 py-1"
+                  {/* Card Footer Actions */}
+                  <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
+                    <Link
+                      href={`/universities/${uni.id}`}
+                      className="font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
                     >
-                      <span>{isExpanded ? "সংক্ষেপ করুন" : "শর্তাবলী দেখুন"}</span>
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                      />
-                    </button>
+                      <span>বিস্তারিত দেখুন</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
 
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={uni.officialAdmissionUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg border border-slate-300 transition-colors shadow-2xs"
-                        title="বিশ্ববিদ্যালয়ের আন্তর্জাতিক অফিশিয়াল অ্যাডমিশন ওয়েবসাইট"
-                      >
-                        <span>অফিশিয়াল পোর্টাল</span>
-                        <ExternalLink className="w-3 h-3 text-slate-400" />
-                      </a>
-
-                      <Link
-                        href="/eligibility"
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-brand-700 hover:bg-brand-800 text-white font-bold rounded-lg transition-colors shadow-2xs"
-                      >
-                        <span>যোগ্যতা পরীক্ষা</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </div>
+                    <a
+                      href={uni.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800"
+                    >
+                      <span>অফিসিয়াল সাইট</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </section>
-
-      {/* Info Callout Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
-        <div className="bg-brand-900 text-brand-50 p-6 sm:p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold text-white">আপনার প্রোফাইলের সাথে এই বিশ্ববিদ্যালয়গুলো মানানসই?</h3>
-            <p className="text-sm text-brand-200 max-w-xl">
-              আমাদের ফ্রি অ্যালগরিদম আপনার জিপিএ, আইইএলটিএস ব্যান্ড এবং বাজেট বিশ্লেষণ করে তাৎক্ষণিক জানিয়ে দেবে আপনি কোন বিশ্ববিদ্যালয়ে অফার পাওয়ার যোগ্য।
-            </p>
-          </div>
-          <Link
-            href="/eligibility"
-            className="inline-flex items-center gap-2 bg-white text-brand-900 hover:bg-brand-50 font-bold px-6 py-3 rounded-xl transition-colors shrink-0 text-sm"
-          >
-            <span>ফ্রি ম্যাচিং টেস্ট দিন</span>
-            <ArrowRight className="w-4 h-4 text-brand-700" />
-          </Link>
         </div>
-      </section>
+      )}
+
+      {/* 5. Tab: Programs View */}
+      {activeTab === "programs" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPrograms.map((prog) => {
+              const favorited = isFavorited("PROGRAM", prog.id);
+              return (
+                <div
+                  key={prog.id}
+                  className="bg-white rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+                >
+                  <div className="p-6 space-y-4">
+                    {/* Top Badges */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-[11px] font-bold">
+                        {prog.degreeLevel} • {prog.durationMonths} মাস
+                      </span>
+
+                      <button
+                        onClick={() => handleToggleFavorite("PROGRAM", prog.id)}
+                        className={`p-1.5 rounded-lg border transition-all ${
+                          favorited
+                            ? "bg-amber-500 text-white border-amber-500"
+                            : "bg-slate-50 text-slate-400 border-slate-200 hover:text-amber-600"
+                        }`}
+                        title="শর্টলিস্টে যুক্ত করুন"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Program Title */}
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-700 transition-colors">
+                        {prog.titleBn}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">{prog.titleEn}</p>
+                    </div>
+
+                    {/* University & Country */}
+                    <div className="text-xs text-slate-700 space-y-0.5">
+                      <p className="font-semibold">{prog.university.nameBn}</p>
+                      <p className="text-slate-500 flex items-center gap-1">
+                        <span>{prog.university.country?.flagEmoji}</span>
+                        <span>{prog.university.city}, {prog.university.country?.nameBn}</span>
+                      </p>
+                    </div>
+
+                    {/* Tuition Fee Breakdown */}
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">বার্ষিক টিউশন ফি</span>
+                        <span className="text-sm font-bold text-brand-700">
+                          {prog.annualTuitionAmount === 0 ? "টিউশন ফ্রি (€০)" : `${prog.tuitionCurrencyCode} ${prog.annualTuitionAmount.toLocaleString()}`}
+                        </span>
+                      </div>
+                      {prog.approxTuitionBdt && prog.approxTuitionBdt > 0 && (
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">বাংলাদেশি টাকায় আনুমানিক</span>
+                          <span className="text-xs font-bold text-slate-900">
+                            {formatBdt(prog.approxTuitionBdt)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Admission Requirements Snippet */}
+                    {prog.admissionRequirements && (
+                      <div className="flex items-center gap-4 text-xs text-slate-600 pt-1">
+                        <div>
+                          <span className="text-slate-400">মিনিমাম IELTS: </span>
+                          <span className="font-bold text-slate-800">{prog.admissionRequirements.minIeltsOverall}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">CGPA: </span>
+                          <span className="font-bold text-slate-800">
+                            {prog.admissionRequirements.minGpaOrCgpa.toFixed(2)}/{prog.admissionRequirements.gpaScale.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Action */}
+                  <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
+                    <Link
+                      href={`/programs/${prog.id}`}
+                      className="font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
+                    >
+                      <span>রিকোয়ারমেন্টস ও আবেদন</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+
+                    {prog.officialProgramUrl && (
+                      <a
+                        href={prog.officialProgramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800"
+                      >
+                        <span>কোর্স লিংক</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Tab: My Saved Shortlist */}
+      {activeTab === "shortlist" && (
+        <div className="space-y-6">
+          <div className="bg-amber-50/60 border border-amber-200 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-amber-950 flex items-center gap-2">
+                <BookmarkCheck className="w-5 h-5 text-amber-600" />
+                <span>আমার সংরক্ষিত শর্টলিস্ট (My University Shortlist)</span>
+              </h2>
+              <p className="text-xs text-amber-800 mt-1 max-w-2xl leading-relaxed">
+                আপনার পছন্দের বিশ্ববিদ্যালয় ও প্রোগ্রামগুলোকে ৩টি ক্যাটাগরিতে (অ্যাম্বিশিয়াস, টার্গেট, সেফ) ভাগ করে প্রস্তুতি নিন।
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-white border border-amber-200 text-amber-900 font-bold text-xs">
+              মোট সংরক্ষিত: {favorites.length}টি
+            </span>
+          </div>
+
+          {favorites.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+              <Bookmark className="w-10 h-10 text-slate-300 mx-auto" />
+              <h3 className="text-base font-bold text-slate-800">এখনও কোনো শর্টলিস্ট তৈরি করেননি</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                ক্যাটালগ ব্রাউজ করে আপনার পছন্দের বিশ্ববিদ্যালয় বা প্রোগ্রামের কার্ডে থাকা বুকমার্ক আইকনে ক্লিক করে যুক্ত করুন।
+              </p>
+              <button
+                onClick={() => setActiveTab("universities")}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-700 text-white text-xs font-bold shadow-xs hover:bg-brand-800"
+              >
+                <span>ক্যাটালগ ব্রাউজ করুন</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Ambitious Column */}
+              <div className="space-y-4 bg-slate-50 p-5 rounded-3xl border border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 text-purple-700">
+                    <span>🚀</span> অ্যাম্বিশিয়াস (Ambitious)
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {favorites.filter((f) => f.category === "AMBITIOUS").length}
+                  </span>
+                </div>
+                {favorites.filter((f) => f.category === "AMBITIOUS").map((fav) => (
+                  <div key={fav.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <p className="font-bold text-slate-900 text-xs">
+                      {fav.university?.nameBn || fav.program?.titleBn || "রেকর্ড"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{fav.university?.city || fav.program?.department}</p>
+                    <button
+                      onClick={() => handleToggleFavorite(fav.itemType, fav.universityId || fav.programId || "")}
+                      className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold pt-1"
+                    >
+                      শর্টলিস্ট থেকে সরান
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Target Column */}
+              <div className="space-y-4 bg-slate-50 p-5 rounded-3xl border border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 text-brand-700">
+                    <span>🎯</span> টার্গেট (Target)
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {favorites.filter((f) => f.category === "TARGET").length}
+                  </span>
+                </div>
+                {favorites.filter((f) => f.category === "TARGET").map((fav) => (
+                  <div key={fav.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <p className="font-bold text-slate-900 text-xs">
+                      {fav.university?.nameBn || fav.program?.titleBn || "রেকর্ড"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{fav.university?.city || fav.program?.department}</p>
+                    <button
+                      onClick={() => handleToggleFavorite(fav.itemType, fav.universityId || fav.programId || "")}
+                      className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold pt-1"
+                    >
+                      শর্টলিস্ট থেকে সরান
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Safe Column */}
+              <div className="space-y-4 bg-slate-50 p-5 rounded-3xl border border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 text-emerald-700">
+                    <span>🛡️</span> সেফ (Safe)
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {favorites.filter((f) => f.category === "SAFE").length}
+                  </span>
+                </div>
+                {favorites.filter((f) => f.category === "SAFE").map((fav) => (
+                  <div key={fav.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <p className="font-bold text-slate-900 text-xs">
+                      {fav.university?.nameBn || fav.program?.titleBn || "রেকর্ড"}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{fav.university?.city || fav.program?.department}</p>
+                    <button
+                      onClick={() => handleToggleFavorite(fav.itemType, fav.universityId || fav.programId || "")}
+                      className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold pt-1"
+                    >
+                      শর্টলিস্ট থেকে সরান
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
