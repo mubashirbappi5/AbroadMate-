@@ -4,3 +4,4 @@ export * from "./calculator.schema";
 export * from "./auth.schema";
 export * from "./document.schema";
 export * from "./admin.schema";
+export * from "./onboarding.schema";

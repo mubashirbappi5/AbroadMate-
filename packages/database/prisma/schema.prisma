@@ -59,6 +59,7 @@ enum AcademicEducationLevel {
   DIPLOMA
   BACHELOR
   MASTER
+  PHD
 }
 
 enum SponsorRelationship {
@@ -242,12 +243,26 @@ model StudentProfile {
   id                   String               @id @default(uuid())
   userId               String               @unique
   user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Step 1: Personal & Contact details
+  dateOfBirth          DateTime?
+  nationality          String               @default("Bangladeshi")
+  currentCountry       String               @default("Bangladesh")
+  currentCity          String?
+  hasPassport          Boolean              @default(false)
+  passportNumber       String?
+  passportExpiryDate   DateTime?
+  alternatePhone       String?
+
+  // Step 2 & Overall Onboarding tracking
   currentLevel         String               // "hsc_passed", "bachelor_passed", "master_passed"
   targetDegreeLevel    DegreeLevel          @default(MASTER)
   targetField          String?              // "Computer Science & AI"
   targetIntakeSeason   IntakeSeason         @default(FALL)
   targetIntakeYear     Int                  @default(2026)
   completionPercentage Int                  @default(25) // 0-100 meter
+  onboardingStep       Int                  @default(1)  // Current onboarding step (1 to 7)
+  onboardingCompleted  Boolean              @default(false)
   deletedAt            DateTime?
 
   createdAt            DateTime             @default(now())
@@ -264,6 +279,7 @@ model StudentProfile {
   @@index([userId])
   @@index([targetDegreeLevel])
   @@index([targetIntakeSeason, targetIntakeYear])
+  @@index([onboardingCompleted])
 }
 
 model AcademicRecord {
@@ -276,7 +292,9 @@ model AcademicRecord {
   groupOrMajor     String?                // "Science", "Business Studies", "CSE"
   gpaOrCgpa        Float                  // 0.0 - 5.0 (for SSC/HSC) or 0.0 - 4.0 (for Bachelor)
   scale            Float                  @default(4.0) // 5.0 or 4.0
+  startYear        Int?
   passingYear      Int
+  resultStatus     String                 @default("PASSED") // "PASSED", "RUNNING", "ENROLLED"
   hasBacklogs      Boolean                @default(false)
   backlogsCount    Int                    @default(0)
   isVerified       Boolean                @default(false)
@@ -303,6 +321,7 @@ model LanguageTestRecord {
   testDate         DateTime?
   expiryDate       DateTime?
   trfNumber        String?         // Test Report Form Number
+  plannedTestDate  DateTime?       // When planning to take the test
   isVerified       Boolean         @default(false)
   certificateDocId String?
 
@@ -341,6 +360,9 @@ model FinancialProfile {
   primaryBankName         String?
   accountHoldingMonths    Int             @default(0)
   fundingStrategyType     String          @default("SELF_AND_FAMILY") // SELF, PARTIAL_SCHOLARSHIP, FULL_SCHOLARSHIP
+  hasSponsor              Boolean         @default(true)
+  scholarshipPreference   String?         // "FULL_ONLY", "PARTIAL_OK", "NO_NEED"
+  educationLoanInterest   String?         // "EXPLORING", "APPLIED", "NOT_INTERESTED"
 
   sponsors                Sponsor[]
 
@@ -374,12 +396,16 @@ model ImmigrationHistory {
   id                  String         @id @default(uuid())
   profileId           String
   profile             StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  countryCode         String         // e.g. "GB", "CA", "US"
+  hasTravelHistory    Boolean        @default(false)
+  travelHistorySummary String?       // Countries visited & years
+  countryCode         String         // e.g. "GB", "CA", "US" or "NONE"
   visaTypeApplied     String?
-  applicationYear     Int
-  outcomeStatus       String         // "GRANTED", "REFUSED", "WITHDRAWN"
+  applicationYear     Int?
+  outcomeStatus       String         @default("NONE") // "GRANTED", "REFUSED", "WITHDRAWN", "NONE"
   hasPreviousRefusal  Boolean        @default(false)
   refusalReasonNotice String?
+  hasViolations       Boolean        @default(false)
+  violationDetails    String?
 
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -392,10 +418,18 @@ model StudyPreference {
   id                   String         @id @default(uuid())
   profileId            String         @unique
   profile              StudentProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  desiredDegreeLevel   DegreeLevel?
+  preferredSubject     String?
+  preferredIntakeSeason IntakeSeason?
+  preferredIntakeYear  Int?
+  desiredStartDate     DateTime?
+  studyMode            String         @default("FULL_TIME") // "FULL_TIME", "PART_TIME", "HYBRID"
   targetCountryCodes   String[]       // ["GB", "CA", "DE"]
   preferredCityType    String         @default("AFFORDABLE_STUDENT_TOWN") // "METROPOLITAN", "AFFORDABLE_STUDENT_TOWN", "RESEARCH_CAMPUS"
   pswWorkImportance    String         @default("HIGH") // "HIGH", "MEDIUM", "LOW"
   priorityRankingRange String?        // "TOP_100", "TOP_250", "ANY_ACCREDITED"
+  academicGoals        String?        // Detailed academic ambitions
+  careerGoals          String?        // Long-term career vision
 
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
