@@ -1,3 +1,13 @@
+export * from "./types";
+export * from "./evaluators/academic";
+export * from "./evaluators/language";
+export * from "./evaluators/experience";
+export * from "./evaluators/nationality";
+export * from "./evaluators/benefits";
+export * from "./engine";
+export * from "./fundingDecision";
+
+// Legacy helper preserved for backward compatibility
 import { StudentAcademicProfile } from "@abroadmate/shared";
 
 export interface ScholarshipCandidate {

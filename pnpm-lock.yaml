@@ -32,6 +32,9 @@ importers:
       '@abroadmate/roadmap-engine':
         specifier: workspace:*
         version: link:../../packages/roadmap-engine
+      '@abroadmate/scholarship-engine':
+        specifier: workspace:*
+        version: link:../../packages/scholarship-engine
       '@abroadmate/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -173,6 +176,9 @@ importers:
       '@abroadmate/shared':
         specifier: workspace:*
         version: link:../shared
+      '@abroadmate/validation':
+        specifier: workspace:*
+        version: link:../validation
     devDependencies:
       typescript:
         specifier: ^5.7.3

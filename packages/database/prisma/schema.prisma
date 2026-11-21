@@ -143,6 +143,26 @@ enum DocumentCategory {
   OTHER
 }
 
+enum ScholarshipProviderType {
+  GOVERNMENT
+  UNIVERSITY
+  FOUNDATION_TRUST
+  EXTERNAL_ORGANIZATION
+}
+
+enum ScholarshipFundingType {
+  FULL_FUNDED
+  TUITION_ONLY
+  PARTIAL_WAIVER
+  STIPEND_ONLY
+  FIXED_GRANT
+}
+
+enum FundingChoiceType {
+  SCHOLARSHIP_FUNDED
+  SELF_FUNDED
+}
+
 enum ReminderChannel {
   EMAIL
   IN_APP
@@ -190,6 +210,7 @@ model User {
   auditLogs          AuditLog[]
   adminRole          AdminRole?
   savedFavorites     SavedFavorite[]
+  fundingDecisions   FundingDecisionLog[]
   reviewedData       DataReview[]         @relation("ReviewerRelation")
   approvedPolicies   PolicyChangeApproval[] @relation("PolicyApproverRelation")
   proposedPolicies   PolicyChangeApproval[] @relation("PolicyProposerRelation")
@@ -575,6 +596,7 @@ model University {
   lastVerifiedAt          DateTime            @default(now())
 
   programs                Program[]
+  scholarships            Scholarship[]
   sources                 InformationSource[]
   savedByStudents         SavedFavorite[]
 
@@ -723,45 +745,127 @@ model ProgramIntake {
 }
 
 model Scholarship {
-  id                    String                       @id @default(uuid())
-  countryCode           String
-  country               Country                      @relation(fields: [countryCode], references: [code])
-  titleEn               String
-  titleBn               String
-  providerType          String                       // "GOVERNMENT", "UNIVERSITY", "TRUST"
-  coverageType          String                       // "FULL_FUNDED", "TUITION_WAIVER", "STIPEND_ONLY"
-  stipendMonthlyAmount  Float?
-  stipendCurrencyCode   String?
-  coverageDescriptionBn String
-  eligibilityCriteriaBn String
-  officialPortalUrl     String
-  deadlineNotice        String?
+  id                         String                       @id @default(uuid())
+  countryCode                String
+  country                    Country                      @relation(fields: [countryCode], references: [code])
+  universityId               String?
+  university                 University?                  @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  
+  titleEn                    String
+  titleBn                    String
+  providerName               String                       @default("Government Authority")
+  providerType               ScholarshipProviderType      @default(GOVERNMENT)
+  fundingType                ScholarshipFundingType       @default(FULL_FUNDED)
+  coverageType               String                       @default("FULL_FUNDED") // Backward compatibility string: "FULL_FUNDED", "TUITION_WAIVER", "STIPEND_ONLY"
+  
+  // Benefit Coverage Breakdown
+  tuitionCoveragePercent     Float                        @default(100.0) // 100% or partial
+  tuitionCoverageMaxAmount   Float?
+  tuitionCoverageCurrency    String?
+  livingStipendMonthly       Float?                       // e.g. 1340 GBP or 934 EUR
+  livingStipendAnnual        Float?
+  livingStipendCurrency      String?
+  stipendMonthlyAmount       Float?                       // Backward compatibility
+  stipendCurrencyCode        String?                      // Backward compatibility
+  travelSupport              Boolean                      @default(false) // Economy return flight covered
+  travelSupportDetailsBn     String?
+  accommodationSupport       Boolean                      @default(false) // Free housing or allowance
+  accommodationDetailsBn     String?
+  healthInsuranceCovered     Boolean                      @default(false)
+  visaFeeCovered             Boolean                      @default(false)
+  otherBenefitsBn            String?
+  coverageDescriptionBn      String
+  eligibilityCriteriaBn      String
+  
+  // Application & Deadlines
+  applicationDeadline        DateTime?
+  deadlineType               String                       @default("ANNUAL_RECURRING") // "ANNUAL_RECURRING", "FIXED_DATE"
+  deadlineMonth              Int?                         // e.g. 11 for November
+  deadlineDay                Int?                         // e.g. 5 for 5th
+  deadlineNotice             String?                      // "প্রতি বছর নভেম্বরের প্রথম সপ্তাহে"
+  requiredDocumentsJson      String?                      // JSON array: ["2_REFERENCES", "SOP_ESSAY", "TRANSCRIPTS", "WORK_PROOF"]
+  officialPortalUrl          String
+  
+  // Verification and Status
+  effectiveDate              DateTime?
+  lastVerifiedAt             DateTime                     @default(now())
+  verificationStatus         VerificationStatus           @default(VERIFIED)
+  verifiedByAdminId          String?
+  notesBn                    String?
 
-  eligibilityRules      ScholarshipEligibilityRule[]
-  sources               InformationSource[]
+  eligibilityRules           ScholarshipEligibilityRule[]
+  fundingDecisions           FundingDecisionLog[]
+  sources                    InformationSource[]
 
-  createdAt             DateTime                     @default(now())
-  updatedAt             DateTime                     @updatedAt
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
 
   @@index([countryCode])
-  @@index([coverageType])
+  @@index([providerType])
+  @@index([fundingType])
+  @@index([verificationStatus])
 }
 
 model ScholarshipEligibilityRule {
-  id                   String        @id @default(uuid())
-  scholarshipId        String
-  scholarship          Scholarship   @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
-  minCgpaRequired      Float?
-  minIeltsRequired     Float?
-  eligibleDegreeLevels DegreeLevel[]
-  workExperienceMonths Int           @default(0)
-  targetNationalities  String[]      @default(["BD"])
-  ruleDescriptionBn    String?
+  id                         String                       @id @default(uuid())
+  scholarshipId              String
+  scholarship                Scholarship                  @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  
+  eligibleDegreeLevels       DegreeLevel[]
+  eligibleDisciplines        String[]                     @default([])
+  targetNationalities        String[]                     @default(["BD"])
+  
+  // Academic thresholds
+  minCgpaRequired            Float?                       @default(3.0)
+  gpaScale                   Float                        @default(4.0)
+  minPercentage              Float?
+  minUkDegreeClassification  String?                      // "FIRST_CLASS", "UPPER_SECOND_2_1"
+  
+  // Language thresholds
+  minIeltsRequired           Float?                       @default(6.5)
+  minIeltsEachBand           Float?                       @default(6.0)
+  minPteRequired             Int?
+  minToeflRequired           Int?
+  duolingoAccepted           Boolean                      @default(false)
+  
+  // Experience & Age
+  workExperienceMonths       Int                          @default(0) // e.g. 24 months (2 years) for Chevening / DAAD
+  workExperienceRequired     Boolean                      @default(false)
+  minAge                     Int?
+  maxAge                     Int?
+  
+  ruleDescriptionBn          String?
 
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
 
   @@index([scholarshipId])
+}
+
+model FundingDecisionLog {
+  id                   String            @id @default(uuid())
+  userId               String
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  choiceType           FundingChoiceType
+  scholarshipId        String?
+  scholarship          Scholarship?      @relation(fields: [scholarshipId], references: [id], onDelete: SetNull)
+  
+  coveredTuitionAmount Float             @default(0)
+  coveredLivingAmount  Float             @default(0)
+  uncoveredExpensesBdt Float             @default(0)
+  currencyCode         String            @default("BDT")
+  
+  notesBn              String?
+  isActive             Boolean           @default(true)
+  decidedAt            DateTime          @default(now())
+
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([choiceType])
+  @@index([isActive])
 }
 
 // ---------------------------------------------------------
