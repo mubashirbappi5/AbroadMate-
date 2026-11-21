@@ -1,3 +1,14 @@
+export * from "./equivalency/bavarian";
+export * from "./equivalency/ukHonours";
+export * from "./evaluators/academic";
+export * from "./evaluators/language";
+export * from "./evaluators/prerequisites";
+export * from "./evaluators/intake";
+export * from "./engine";
+
+// -------------------------------------------------------------
+// Legacy Quick Eligibility (Preserved for backward compatibility)
+// -------------------------------------------------------------
 import { QuickEligibilityCheckInput } from "@abroadmate/validation";
 import { INITIAL_COUNTRIES } from "@abroadmate/shared";
 
@@ -19,7 +30,6 @@ export function evaluateQuickEligibility(input: QuickEligibilityCheckInput): Eli
 
   // 1. Evaluate GPA / CGPA
   if (input.degreeLevel === "bachelor") {
-    // For Bachelor, input is typically HSC GPA (Scale of 5.00)
     if (input.currentGpa >= 4.5) {
       academicPassed = true;
       score += 50;
@@ -37,7 +47,6 @@ export function evaluateQuickEligibility(input: QuickEligibilityCheckInput): Eli
       recommendationsBn.push("উন্নত ব্যাকগ্রাউন্ড প্রদর্শন করতে অতিরিক্ত কোনো আন্তর্জাতিক ডিপ্লোমা বা দেশে ভালো ফলাফলের চেষ্টা করুন।");
     }
   } else {
-    // For Master's / PhD, input is Bachelor CGPA (Scale of 4.00) or HSC if scaled
     const normalizedCgpa = input.currentGpa > 4.0 ? (input.currentGpa / 5.0) * 4.0 : input.currentGpa;
     
     if (normalizedCgpa >= 3.3) {

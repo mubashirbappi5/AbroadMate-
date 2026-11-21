@@ -619,25 +619,91 @@ model Program {
 }
 
 model AdmissionRequirement {
-  id                     String      @id @default(uuid())
-  programId              String      @unique
-  program                Program     @relation(fields: [programId], references: [id], onDelete: Cascade)
-  minGpaOrCgpa           Float       @default(3.0)
-  gpaScale               Float       @default(4.0)
-  minIeltsOverall        Float       @default(6.5)
-  minIeltsEachBand       Float       @default(6.0)
-  greRequired            Boolean     @default(false)
-  minGreScore            Int?
-  gmatRequired           Boolean     @default(false)
-  minGmatScore           Int?
-  workExperienceMonths   Int         @default(0)
-  requiredDocumentsJson  String?     // JSON list of required files
-  notesBn                String?
+  id                         String                        @id @default(uuid())
+  programId                  String                        @unique
+  program                    Program                       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  
+  // Versioning and Verification
+  version                    Int                           @default(1)
+  verificationStatus         VerificationStatus            @default(VERIFIED)
+  verifiedAt                 DateTime?
+  verifiedByAdminId          String?
+  officialSourceUrl          String                        @default("https://www.gov.uk/student-visa")
+  sourceNotes                String?
+  
+  // Qualification & Academic Requirements
+  requiredDegreeLevel        DegreeLevel                   @default(BACHELOR)
+  acceptedQualifications     String[]
+  requiredDisciplines        String[]
+  minGpaOrCgpa               Float                         @default(3.0)
+  gpaScale                   Float                         @default(4.0)
+  minPercentage              Float?
+  minUkDegreeClassification  String?                       // "FIRST_CLASS", "UPPER_SECOND_2_1", "LOWER_SECOND_2_2"
+  maxGermanGrade             Float?                        // German scale: e.g. 2.5 (1.0 is best, lower is better)
+  
+  // Language Proficiency Thresholds
+  minIeltsOverall            Float                         @default(6.5)
+  minIeltsEachBand           Float                         @default(6.0)
+  minIeltsListening          Float?                        @default(6.0)
+  minIeltsReading            Float?                        @default(6.0)
+  minIeltsWriting            Float?                        @default(6.0)
+  minIeltsSpeaking           Float?                        @default(6.0)
+  
+  minPteOverall              Int?
+  minPteEachBand             Int?
+  
+  minToeflIbtOverall         Int?
+  minToeflEachBand           Int?
+  
+  duolingoAccepted           Boolean                       @default(false)
+  minDuolingoScore           Int?
+  
+  // Standardized Tests
+  greRequired                Boolean                       @default(false)
+  minGreScore                Int?
+  minGreQuant                Int?
+  minGreVerbal               Int?
+  gmatRequired               Boolean                       @default(false)
+  minGmatScore               Int?
+  
+  // Experience, Prereqs & Portfolio
+  workExperienceMonths       Int                           @default(0)
+  workExperienceRequired     Boolean                       @default(false)
+  workExperienceField        String?
+  portfolioRequired          Boolean                       @default(false)
+  prerequisiteCoursesJson    String?                       // JSON array of prerequisite courses
+  requiredDocumentsJson      String?                       // JSON list of required files
+  notesBn                    String?
+  
+  // Equivalency and Conditional Policies
+  allowsConditionalAdmission Boolean                       @default(true) // e.g. Pre-sessional English
+  preSessionalEnglishAvailable Boolean                     @default(true)
+  equivalencyNotesBn         String?
 
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  createdAt                  DateTime                      @default(now())
+  updatedAt                  DateTime                      @updatedAt
+
+  versions                   AdmissionRequirementVersion[]
 
   @@index([programId])
+  @@index([verificationStatus])
+}
+
+model AdmissionRequirementVersion {
+  id                   String               @id @default(uuid())
+  requirementId        String
+  requirement          AdmissionRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  version              Int
+  publishedAt          DateTime             @default(now())
+  verifiedByAdminId    String?
+  officialSourceUrl    String
+  changeSummaryBn      String?
+  snapshotData         Json
+
+  createdAt            DateTime             @default(now())
+
+  @@index([requirementId])
+  @@index([version])
 }
 
 model ProgramIntake {
