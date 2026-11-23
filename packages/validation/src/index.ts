@@ -10,3 +10,4 @@ export * from "./scholarship.schema";
 export * from "./visa.schema";
 export * from "./roadmap.schema";
 export * from "./ai.schema";
+export * from "./worker.schema";

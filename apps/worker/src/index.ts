@@ -1,111 +1,187 @@
-import { Worker, Queue } from "bullmq";
-import Redis from "ioredis";
+import { Worker, Job } from "bullmq";
 import { prisma } from "@abroadmate/database";
-import { calculateDeadlineAlerts } from "@abroadmate/roadmap-engine";
+import { connection, allQueues } from "./queues";
+import { registerCronSchedulers } from "./schedulers/cronScheduler";
 
-const redisHost = process.env.REDIS_HOST ?? "localhost";
-const redisPort = Number(process.env.REDIS_PORT ?? 6379);
+// Import processors
+import { processDeadlineRemindersJob } from "./processors/deadlineReminders";
+import { processScheduledNotificationsJob } from "./processors/scheduledNotifications";
+import { processSourceMonitoringJob } from "./processors/sourceMonitoring";
+import { processPolicyChangeDetectionJob } from "./processors/policyChangeDetection";
+import { processAIDocumentGenerationJob } from "./processors/aiDocumentGeneration";
+import { processDocumentProcessingJob } from "./processors/documentProcessing";
+import { processPeriodicDataVerificationJob } from "./processors/periodicVerification";
+import { processEmailDeliveryJob } from "./processors/emailDelivery";
 
-console.log(`🚀 AbroadMate Background Worker initializing on Redis ${redisHost}:${redisPort}...`);
+export * from "./queues";
+export * from "./processors/deadlineReminders";
+export * from "./processors/scheduledNotifications";
+export * from "./processors/sourceMonitoring";
+export * from "./processors/policyChangeDetection";
+export * from "./processors/aiDocumentGeneration";
+export * from "./processors/documentProcessing";
+export * from "./processors/periodicVerification";
+export * from "./processors/emailDelivery";
+export * from "./services/emailService";
+export * from "./services/telegramService";
+export * from "./services/idempotencyService";
 
-// Connection options with reconnect handling
-const connection = new Redis({
-  host: redisHost,
-  port: redisPort,
-  maxRetriesPerRequest: null,
-  lazyConnect: true,
-});
-
-export const DEADLINE_REMINDER_QUEUE = "deadline-reminders";
-export const deadlineQueue = new Queue(DEADLINE_REMINDER_QUEUE, { connection });
+const workers: Worker[] = [];
 
 /**
- * Checks all active deadlines and triggers in-app and email notifications
- * for 30, 14, 7, 3, and 1-day alert intervals.
+ * Handles failed jobs and records them into the Dead Letter Queue (FailedJobLog) in PostgreSQL
  */
-export async function processAllScheduledDeadlineAlerts() {
+async function handleDeadLetterLog(job: Job | undefined, err: Error, queueName: string) {
+  if (!job) return;
+
+  console.error(`💥 [DLQ / Failed Job] Queue: ${queueName} | Job: ${job.id} | Error:`, err.message);
+
   try {
-    const deadlines = await prisma.deadline.findMany({
-      where: { isCompleted: false },
+    await prisma.failedJobLog.create({
+      data: {
+        queueName,
+        jobId: String(job.id || "unknown"),
+        jobName: job.name,
+        payloadJson: JSON.stringify(job.data || {}),
+        failedReason: `${err.name}: ${err.message}\n${err.stack || ""}`,
+        attemptsMade: job.attemptsMade,
+      },
     });
-
-    const alerts = calculateDeadlineAlerts(deadlines);
-    console.log(`[Deadline Scanner] Found ${alerts.length} active threshold alerts.`);
-
-    for (const alert of alerts) {
-      // Find eligible target users (either specific user or all active students if global)
-      const targetDeadline = deadlines.find((d) => d.id === alert.deadlineId);
-      if (!targetDeadline) continue;
-
-      let userIds: string[] = [];
-
-      if (targetDeadline.userId) {
-        userIds = [targetDeadline.userId];
-      } else {
-        // Global deadline: notify active students
-        const activeUsers = await prisma.user.findMany({
-          where: { isActive: true },
-          select: { id: true },
-          take: 50,
-        });
-        userIds = activeUsers.map((u) => u.id);
-      }
-
-      for (const uid of userIds) {
-        // Enqueue or record in-app Notification
-        await prisma.notification.create({
-          data: {
-            userId: uid,
-            title: `ডেডলাইন অ্যালার্ট: ${alert.titleBn}`,
-            message: alert.messageBn,
-            type: alert.urgency === "CRITICAL" ? "DEADLINE_ALERT" : "INFO",
-            actionUrl: "/dashboard/deadlines",
-          },
-        });
-      }
-    }
-
-    return { processedCount: alerts.length };
-  } catch (error) {
-    console.error("Error running processAllScheduledDeadlineAlerts:", error);
-    return { error: (error as Error).message };
+  } catch (logErr) {
+    console.error("Failed to write to FailedJobLog:", logErr);
   }
 }
 
-export function startWorker() {
+export function startWorkers() {
+  console.log("🚀 Starting AbroadMate Background Worker service...");
+
   connection
     .connect()
-    .then(() => {
+    .then(async () => {
       console.log("✅ Worker connected to Redis.");
 
-      const worker = new Worker(
-        DEADLINE_REMINDER_QUEUE,
+      // Register Repeatable Cron Schedulers
+      await registerCronSchedulers().catch((err) => {
+        console.warn("⚠️ Error registering cron schedulers:", err.message);
+      });
+
+      // 1. Deadline Reminders Worker
+      const wDeadline = new Worker(
+        "deadline-reminders",
         async (job) => {
-          console.log(`[Worker Job] Processing reminder:`, job.name, job.data);
-
-          if (job.name === "scan-deadline-thresholds") {
-            return await processAllScheduledDeadlineAlerts();
-          }
-
-          return { status: "PROCESSED", timestamp: new Date().toISOString() };
+          console.log(`[Worker] Running deadline-reminders job: ${job.name}`);
+          return await processDeadlineRemindersJob();
         },
-        { connection }
+        { connection, concurrency: 5 }
       );
+      wDeadline.on("failed", (job, err) => handleDeadLetterLog(job, err, "deadline-reminders"));
+      workers.push(wDeadline);
 
-      worker.on("completed", (job) => {
-        console.log(`Job ${job.id} completed successfully.`);
-      });
+      // 2. Scheduled Notifications Worker
+      const wScheduled = new Worker(
+        "scheduled-notifications",
+        async (job) => {
+          console.log(`[Worker] Running scheduled-notifications job: ${job.name}`);
+          return await processScheduledNotificationsJob(job.data);
+        },
+        { connection, concurrency: 5 }
+      );
+      wScheduled.on("failed", (job, err) => handleDeadLetterLog(job, err, "scheduled-notifications"));
+      workers.push(wScheduled);
 
-      worker.on("failed", (job, err) => {
-        console.error(`Job ${job?.id} failed:`, err);
-      });
+      // 3. Source Monitoring Worker
+      const wSource = new Worker(
+        "source-monitoring",
+        async (job) => {
+          console.log(`[Worker] Running source-monitoring job: ${job.name}`);
+          return await processSourceMonitoringJob();
+        },
+        { connection, concurrency: 2 }
+      );
+      wSource.on("failed", (job, err) => handleDeadLetterLog(job, err, "source-monitoring"));
+      workers.push(wSource);
+
+      // 4. Policy Change Detection Worker
+      const wPolicy = new Worker(
+        "policy-change-detection",
+        async (job) => {
+          console.log(`[Worker] Running policy-change-detection job: ${job.name}`);
+          return await processPolicyChangeDetectionJob(job.data);
+        },
+        { connection, concurrency: 3 }
+      );
+      wPolicy.on("failed", (job, err) => handleDeadLetterLog(job, err, "policy-change-detection"));
+      workers.push(wPolicy);
+
+      // 5. AI Document Generation Worker
+      const wAI = new Worker(
+        "ai-document-generation",
+        async (job) => {
+          console.log(`[Worker] Running ai-document-generation job: ${job.name}`);
+          return await processAIDocumentGenerationJob(job.data);
+        },
+        { connection, concurrency: 3 }
+      );
+      wAI.on("failed", (job, err) => handleDeadLetterLog(job, err, "ai-document-generation"));
+      workers.push(wAI);
+
+      // 6. Document Processing Worker
+      const wDoc = new Worker(
+        "document-processing",
+        async (job) => {
+          console.log(`[Worker] Running document-processing job: ${job.name}`);
+          return await processDocumentProcessingJob(job.data);
+        },
+        { connection, concurrency: 5 }
+      );
+      wDoc.on("failed", (job, err) => handleDeadLetterLog(job, err, "document-processing"));
+      workers.push(wDoc);
+
+      // 7. Periodic Data Verification Worker
+      const wVerification = new Worker(
+        "periodic-data-verification",
+        async (job) => {
+          console.log(`[Worker] Running periodic-data-verification job: ${job.name}`);
+          return await processPeriodicDataVerificationJob();
+        },
+        { connection, concurrency: 1 }
+      );
+      wVerification.on("failed", (job, err) =>
+        handleDeadLetterLog(job, err, "periodic-data-verification")
+      );
+      workers.push(wVerification);
+
+      // 8. Email Delivery Worker
+      const wEmail = new Worker(
+        "email-delivery",
+        async (job) => {
+          console.log(`[Worker] Running email-delivery job: ${job.name}`);
+          return await processEmailDeliveryJob(job.data);
+        },
+        { connection, concurrency: 10 }
+      );
+      wEmail.on("failed", (job, err) => handleDeadLetterLog(job, err, "email-delivery"));
+      workers.push(wEmail);
+
+      console.log(`✅ All 8 BullMQ worker processors active and listening.`);
     })
     .catch((err) => {
-      console.warn("⚠️ Worker: Redis not reachable in local environment, queuing in standby mode.", err.message);
+      console.warn("⚠️ Worker: Redis connection unavailable in local offline mode. Standby.", err.message);
     });
 }
 
-// Start worker if executed directly
+// Graceful shutdown
+async function gracefulShutdown() {
+  console.log("Shutting down workers...");
+  await Promise.all(workers.map((w) => w.close()));
+  await connection.quit();
+  process.exit(0);
+}
+
+process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);
+
+// If executed directly
 if (require.main === module) {
-  startWorker();
+  startWorkers();
 }

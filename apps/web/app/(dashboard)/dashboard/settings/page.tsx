@@ -31,6 +31,11 @@ export default function SettingsPage() {
   const [scholarshipAlerts, setScholarshipAlerts] = useState(true);
   const [visaRuleUpdates, setVisaRuleUpdates] = useState(true);
   const [weeklyRoadmapChecklist, setWeeklyRoadmapChecklist] = useState(false);
+  const [telegramAlerts, setTelegramAlerts] = useState(false);
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [customReminderDays, setCustomReminderDays] = useState<number[]>([30, 14, 7, 3, 1]);
+  const [newCustomDay, setNewCustomDay] = useState("");
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   // Localization
   const [currencyPref, setCurrencyPref] = useState("BDT");
@@ -42,10 +47,92 @@ export default function SettingsPage() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
-  const handleSaveNotifications = (e: React.FormEvent) => {
+  // Load preferences from API
+  React.useEffect(() => {
+    fetch("/api/user/preferences")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          const d = json.data;
+          setDeadlineAlertsEmail(d.deadlineAlertsEmail ?? true);
+          setDeadlineAlertsWeb(d.deadlineAlertsWeb ?? true);
+          setScholarshipAlerts(d.scholarshipAlerts ?? true);
+          setVisaRuleUpdates(d.visaRuleUpdates ?? true);
+          setWeeklyRoadmapChecklist(d.weeklyRoadmapChecklist ?? false);
+          setTelegramAlerts(d.telegramAlerts ?? false);
+          setTelegramChatId(d.telegramChatId || "");
+          if (d.customReminderDays && d.customReminderDays.length > 0) {
+            setCustomReminderDays(d.customReminderDays);
+          }
+        }
+      })
+      .catch((err) => console.error("Error loading preferences:", err));
+  }, []);
+
+  const handleToggleThreshold = (day: number) => {
+    if (customReminderDays.includes(day)) {
+      if (customReminderDays.length === 1) {
+        alert("কমপক্ষে একটি রিমাইন্ডার ব্যবধান সক্রিয় রাখতে হবে।");
+        return;
+      }
+      setCustomReminderDays(customReminderDays.filter((d) => d !== day));
+    } else {
+      setCustomReminderDays([...customReminderDays, day].sort((a, b) => b - a));
+    }
+  };
+
+  const handleAddCustomDay = () => {
+    const day = parseInt(newCustomDay, 10);
+    if (!day || day < 1 || day > 180) {
+      alert("১ থেকে ১৮০-এর মধ্যে সঠিক দিনের সংখ্যা দিন।");
+      return;
+    }
+    if (customReminderDays.includes(day)) {
+      alert("এই রিমাইন্ডার দিনটি ইতিমধ্যে সক্রিয় আছে।");
+      return;
+    }
+    setCustomReminderDays([...customReminderDays, day].sort((a, b) => b - a));
+    setNewCustomDay("");
+  };
+
+  const handleRemoveCustomDay = (day: number) => {
+    if (customReminderDays.length === 1) {
+      alert("কমপক্ষে একটি রিমাইন্ডার ব্যবধান সক্রিয় রাখতে হবে।");
+      return;
+    }
+    setCustomReminderDays(customReminderDays.filter((d) => d !== day));
+  };
+
+  const handleSaveNotifications = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedMessage("নোটিফিকেশন পছন্দসমূহ সফলভাবে সংরক্ষিত হয়েছে!");
-    setTimeout(() => setSavedMessage(null), 3500);
+    try {
+      setSavingPrefs(true);
+      const res = await fetch("/api/user/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deadlineAlertsEmail,
+          deadlineAlertsWeb,
+          scholarshipAlerts,
+          visaRuleUpdates,
+          weeklyRoadmapChecklist,
+          telegramAlerts,
+          telegramChatId: telegramChatId || null,
+          customReminderDays,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSavedMessage(json.message || "নোটিফিকেশন পছন্দসমূহ সফলভাবে সংরক্ষিত হয়েছে!");
+      } else {
+        alert(json.error || "সংরক্ষণ করতে সমস্যা হয়েছে।");
+      }
+    } catch (err: any) {
+      alert(err.message || "নেটওয়ার্ক ত্রুটি।");
+    } finally {
+      setSavingPrefs(false);
+      setTimeout(() => setSavedMessage(null), 3500);
+    }
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -269,14 +356,153 @@ export default function SettingsPage() {
               <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
             </label>
           </div>
+
+          {/* In-app Web alerts */}
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold text-slate-900 block">
+                ইন-অ্যাপ ড্যাশবোর্ড নোটিফিকেশন
+              </span>
+              <p className="text-[11px] text-slate-500">
+                ড্যাশবোর্ডের নোটিফিকেশন ড্রয়ার ও বেল আইকনে তাৎক্ষণিক রিয়েলটাইম অ্যালার্ট।
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={deadlineAlertsWeb}
+                onChange={() => setDeadlineAlertsWeb(!deadlineAlertsWeb)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+            </label>
+          </div>
+
+          {/* Telegram Channel Toggle & Chat ID */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                  টেলিগ্রাম পুশ অ্যালার্ট (ঐচ্ছিক চ্যানেল)
+                </span>
+                <p className="text-[11px] text-slate-500">
+                  আপনার টেলিগ্রাম অ্যাকাউন্টে তাৎক্ষণিক ডেডলাইন ও পলিসি রিমাইন্ডার পান।
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={telegramAlerts}
+                  onChange={() => setTelegramAlerts(!telegramAlerts)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+              </label>
+            </div>
+            {telegramAlerts && (
+              <div className="pt-2 border-t border-slate-200/60">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  আপনার Telegram Chat ID দিন:
+                </label>
+                <input
+                  type="text"
+                  value={telegramChatId}
+                  onChange={(e) => setTelegramChatId(e.target.value)}
+                  placeholder="যেমন: 123456789"
+                  className="w-full sm:w-72 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Configurable Reminder Rules (30, 14, 7, 3, 1 + Custom) */}
+          <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-3">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold text-indigo-950 block">
+                ডেডলাইন রিমাইন্ডার ব্যবধান পছন্দ (Reminder Thresholds)
+              </span>
+              <p className="text-[11px] text-indigo-700">
+                আবেদনের শেষ তারিখের কত দিন আগে আপনাকে সতর্ক করা হবে তা নির্বাচন করুন:
+              </p>
+            </div>
+
+            {/* Standard Threshold Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {[30, 14, 7, 3, 1].map((day) => {
+                const active = customReminderDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => handleToggleThreshold(day)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      active
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{day} দিন পূর্বে</span>
+                    {active && <span>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Days Input */}
+            <div className="pt-2 border-t border-indigo-100/80 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold text-indigo-900">কাস্টম রিমাইন্ডার যোগ করুন:</span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={newCustomDay}
+                  onChange={(e) => setNewCustomDay(e.target.value)}
+                  placeholder="যেমন: ৪৫"
+                  className="w-20 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-center font-bold"
+                />
+                <span className="text-[11px] text-slate-600">দিন</span>
+                <button
+                  type="button"
+                  onClick={handleAddCustomDay}
+                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition"
+                >
+                  যোগ করুন
+                </button>
+              </div>
+            </div>
+
+            {/* Active configured list preview */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-slate-600">
+              <span className="font-semibold text-slate-700">বর্তমানে সক্রিয়:</span>
+              {customReminderDays.map((d) => (
+                <span
+                  key={d}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 font-bold text-slate-800"
+                >
+                  {d} দিন
+                  {![30, 14, 7, 3, 1].includes(d) && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomDay(d)}
+                      className="text-rose-500 hover:text-rose-700 font-bold ml-0.5"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="text-right">
           <button
             type="submit"
+            disabled={savingPrefs}
             className="px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-xl font-bold text-xs transition-colors shadow-2xs"
           >
-            নোটিফিকেশন পছন্দ সংরক্ষণ করুন
+            {savingPrefs ? "সংরক্ষণ হচ্ছে..." : "নোটিফিকেশন পছন্দ সংরক্ষণ করুন"}
           </button>
         </div>
       </form>

@@ -265,6 +265,7 @@ model User {
   approvedPolicies   PolicyChangeApproval[] @relation("PolicyApproverRelation")
   proposedPolicies   PolicyChangeApproval[] @relation("PolicyProposerRelation")
   verificationsDone  VerificationRecord[] @relation("VerifierRelation")
+  dispatchLogs       NotificationDispatchLog[]
 
   @@index([supabaseId])
   @@index([email])
@@ -296,6 +297,9 @@ model UserSettings {
   scholarshipAlerts      Boolean            @default(true)
   visaRuleUpdates        Boolean            @default(true)
   weeklyRoadmapChecklist Boolean            @default(false)
+  telegramAlerts         Boolean            @default(false)
+  telegramChatId         String?
+  customReminderDays     Int[]              @default([30, 14, 7, 3, 1])
   updatedAt              DateTime           @updatedAt
 
   @@index([userId])
@@ -1681,4 +1685,40 @@ model PolicyChangeApproval {
 
   @@index([versionId])
   @@index([approvalStatus])
+}
+
+// ---------------------------------------------------------
+// 7. Background Jobs, Notification Logs & DLQ
+// ---------------------------------------------------------
+
+model NotificationDispatchLog {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel        String    // "IN_APP", "EMAIL", "TELEGRAM"
+  category       String    // "DEADLINE_REMINDER", "POLICY_CHANGE", "SOURCE_EXPIRY"
+  referenceId    String    // Deadline ID, Policy Version ID, etc.
+  thresholdDays  Int?      // 30, 14, 7, 3, 1
+  idempotencyKey String    @unique // e.g. "EMAIL_DEADLINE_uuid_7_2026-11-23"
+  recipientEmail String?
+  dispatchedAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([idempotencyKey])
+}
+
+model FailedJobLog {
+  id           String    @id @default(uuid())
+  queueName    String
+  jobId        String
+  jobName      String
+  payloadJson  String    @db.Text
+  failedReason String    @db.Text
+  attemptsMade Int
+  failedAt     DateTime  @default(now())
+  isResolved   Boolean   @default(false)
+  resolvedAt   DateTime?
+
+  @@index([queueName])
+  @@index([isResolved])
 }

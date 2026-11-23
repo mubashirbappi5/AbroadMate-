@@ -11,6 +11,7 @@ import {
   Building2,
   Award,
   History,
+  Cpu,
   ShieldCheck,
   ChevronRight,
   Sparkles,
@@ -60,6 +61,14 @@ const adminTabs = [
     label: "সিকিউরিটি ও অডিট লগ",
     labelEn: "Audit Trail",
     icon: History,
+  },
+  {
+    href: "/dashboard/admin/jobs",
+    label: "ব্যাকগ্রাউন্ড জব ও কিউ",
+    labelEn: "Jobs & Queues",
+    icon: Cpu,
+    badge: "৮ কিউ",
+    badgeColor: "bg-emerald-100 text-emerald-800",
   },
 ];
 
