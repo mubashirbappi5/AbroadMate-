@@ -253,6 +253,8 @@ model User {
   reminders          Reminder[]
   deadlines          Deadline[]
   notifications      Notification[]
+  aiConversations    AIConversation[]
+  aiTokenLogs        AITokenUsageLog[]
   auditLogs          AuditLog[]
   adminRole          AdminRole?
   savedFavorites     SavedFavorite[]
@@ -1438,23 +1440,87 @@ model UserDocument {
 }
 
 model SOPDocument {
-  id                 String     @id @default(uuid())
+  id                 String               @id @default(uuid())
   userId             String
-  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   title              String
   targetCountryCode  String?
   targetUniversity   String?
   targetProgram      String?
-  content            String     @db.Text
-  versionNumber      Int        @default(1)
-  aiFeedbackJson     String?    // Stored structured feedback points
-  isFinalized        Boolean    @default(false)
+  degreeLevel        DegreeLevel          @default(MASTER)
+  content            String               @db.Text
+  sectionsJson       String?              @db.Text // Stored JSON of 5 sections
+  versionNumber      Int                  @default(1)
+  toneStyle          String               @default("ACADEMIC") // ACADEMIC, PROFESSIONAL, PERSUASIVE
+  aiFeedbackJson     String?              @db.Text // Stored structured feedback points
+  critiqueScore      Int?                 // 1-100 score
+  isFinalized        Boolean              @default(false)
   deletedAt          DateTime?
 
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  revisions          SOPDocumentRevision[]
+
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@index([userId])
+}
+
+model SOPDocumentRevision {
+  id               String       @id @default(uuid())
+  sopDocumentId    String
+  sopDocument      SOPDocument  @relation(fields: [sopDocumentId], references: [id], onDelete: Cascade)
+  versionNumber    Int
+  changeSummary    String       // "ইন্ট্রোডাকশন সেকশন সম্প্রসারণ ও টোন ইমপ্রুভমেন্ট"
+  contentSnapshot  String       @db.Text
+  sectionsSnapshot String?      @db.Text
+  wordCount        Int
+  createdAt        DateTime     @default(now())
+
+  @@index([sopDocumentId])
+}
+
+model AIConversation {
+  id             String          @id @default(uuid())
+  userId         String?         // null if guest
+  user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String          @default("নতুন কথোপকথন")
+  targetCountry  String?
+  messages       AIMessage[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model AIMessage {
+  id               String          @id @default(uuid())
+  conversationId   String
+  conversation     AIConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             String          // "user" | "assistant" | "system"
+  content          String          @db.Text
+  citedSourcesJson String?         @db.Text // JSON Array of citations
+  tokenUsage       Int?
+  createdAt        DateTime        @default(now())
+
+  @@index([conversationId])
+}
+
+model AITokenUsageLog {
+  id                String       @id @default(uuid())
+  userId            String?
+  user              User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  featureName       String       // "SOP_BUILDER" | "CHAT_ASSISTANT"
+  modelName         String       // "gpt-4o" | "gpt-4o-mini"
+  promptTokens      Int
+  completionTokens  Int
+  totalTokens       Int
+  estimatedCostUsd  Float
+  latencyMs         Int
+  createdAt         DateTime     @default(now())
+
+  @@index([userId])
+  @@index([featureName])
+  @@index([createdAt])
 }
 
 model SavedFavorite {
