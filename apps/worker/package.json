@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@abroadmate/database": "workspace:*",
+    "@abroadmate/roadmap-engine": "workspace:*",
     "@abroadmate/shared": "workspace:*",
     "bullmq": "^5.41.6",
     "ioredis": "^5.5.0"

@@ -143,6 +143,7 @@ export default function DeadlinesPage() {
   const { locale } = useI18n();
 
   const [deadlines, setDeadlines] = useState<DeadlineItem[]>(INITIAL_DEADLINES);
+  const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
 
@@ -152,16 +153,32 @@ export default function DeadlinesPage() {
   const [newCategory, setNewCategory] = useState<"scholarship" | "university" | "test" | "visa" | "personal">("personal");
   const [newNotes, setNewNotes] = useState("");
 
-  // Load from localStorage
+  // Load from API with localStorage fallback
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("abroadmate_student_deadlines");
-      if (saved) {
-        setDeadlines(JSON.parse(saved));
+    async function loadData() {
+      try {
+        const res = await fetch("/api/deadlines");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setDeadlines(json.data);
+        } else {
+          const saved = localStorage.getItem("abroadmate_student_deadlines");
+          if (saved) setDeadlines(JSON.parse(saved));
+        }
+      } catch (e) {
+        const saved = localStorage.getItem("abroadmate_student_deadlines");
+        if (saved) setDeadlines(JSON.parse(saved));
       }
-    } catch (e) {
-      // fallback
+
+      try {
+        const alertRes = await fetch("/api/deadlines/alerts");
+        const alertJson = await alertRes.json();
+        if (alertJson.success && Array.isArray(alertJson.data)) {
+          setActiveAlerts(alertJson.data);
+        }
+      } catch (e) {}
     }
+    loadData();
   }, []);
 
   const saveDeadlines = (updated: DeadlineItem[]) => {
@@ -173,17 +190,29 @@ export default function DeadlinesPage() {
     }
   };
 
-  const toggleComplete = (id: string) => {
+  const toggleComplete = async (id: string) => {
     const updated = deadlines.map((d) => (d.id === id ? { ...d, completed: !d.completed } : d));
     saveDeadlines(updated);
+
+    try {
+      await fetch(`/api/deadlines/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isCompleted: !deadlines.find((d) => d.id === id)?.completed }),
+      });
+    } catch (e) {}
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const updated = deadlines.filter((d) => d.id !== id);
     saveDeadlines(updated);
+
+    try {
+      await fetch(`/api/deadlines/${id}`, { method: "DELETE" });
+    } catch (e) {}
   };
 
-  const handleAddCustomDeadline = (e: React.FormEvent) => {
+  const handleAddCustomDeadline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newDate) return;
 
@@ -222,6 +251,21 @@ export default function DeadlinesPage() {
     setNewDate("");
     setNewNotes("");
     setShowAddForm(false);
+
+    try {
+      await fetch("/api/deadlines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titleBn: newItem.titleBn,
+          titleEn: newItem.titleEn,
+          deadlineDate: newItem.date,
+          category: newItem.category.toUpperCase(),
+          deadlineType: "CUSTOM_REMINDER",
+          notesBn: newItem.notesBn,
+        }),
+      });
+    } catch (e) {}
   };
 
   const filteredDeadlines = deadlines.filter((d) => {

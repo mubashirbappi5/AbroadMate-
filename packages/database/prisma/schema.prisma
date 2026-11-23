@@ -185,6 +185,35 @@ enum ReminderChannel {
   SMS
 }
 
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING
+  COMPLETED
+  BLOCKED
+  SKIPPED
+}
+
+enum TaskPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DeadlineType {
+  APPLICATION_DEADLINE
+  SCHOLARSHIP_DEADLINE
+  IELTS_TEST_DATE
+  TUITION_DEPOSIT_DEADLINE
+  VISA_SUBMISSION_DEADLINE
+  BIOMETRICS_APPOINTMENT
+  MEDICAL_APPOINTMENT
+  PASSPORT_EXPIRY
+  ENROLLMENT_DEADLINE
+  CUSTOM_REMINDER
+}
+
 enum NotificationType {
   INFO
   WARNING
@@ -222,6 +251,7 @@ model User {
   documents          UserDocument[]
   sopDocuments       SOPDocument[]
   reminders          Reminder[]
+  deadlines          Deadline[]
   notifications      Notification[]
   auditLogs          AuditLog[]
   adminRole          AdminRole?
@@ -725,6 +755,7 @@ model University {
 
   programs                Program[]
   scholarships            Scholarship[]
+  roadmaps                Roadmap[]
   sources                 InformationSource[]
   savedByStudents         SavedFavorite[]
 
@@ -760,6 +791,7 @@ model Program {
   sources               InformationSource[]
   savedByStudents       SavedFavorite[]
   budgetPlans           BudgetPlan[]
+  roadmaps              Roadmap[]
 
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -924,6 +956,7 @@ model Scholarship {
 
   eligibilityRules           ScholarshipEligibilityRule[]
   fundingDecisions           FundingDecisionLog[]
+  roadmaps                   Roadmap[]
   sources                    InformationSource[]
 
   createdAt                  DateTime                     @default(now())
@@ -1290,19 +1323,28 @@ model UserGoal {
 }
 
 model Roadmap {
-  id                 String         @id @default(uuid())
+  id                 String           @id @default(uuid())
   userId             String
-  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   targetCountryCode  String
+  targetUniversityId String?
+  university         University?      @relation(fields: [targetUniversityId], references: [id], onDelete: SetNull)
+  targetProgramId    String?
+  program            Program?         @relation(fields: [targetProgramId], references: [id], onDelete: SetNull)
   targetIntakeSeason IntakeSeason
   targetIntakeYear   Int
-  currentStageNumber Int            @default(2) // Stages 1 to 5
-  isCompleted        Boolean        @default(false)
+  fundingChoice      FundingChoiceType @default(SELF_FUNDED)
+  scholarshipId      String?
+  scholarship        Scholarship?     @relation(fields: [scholarshipId], references: [id], onDelete: SetNull)
+  currentStageNumber Int              @default(1)
+  isCompleted        Boolean          @default(false)
+  versionNumber      Int              @default(1)
 
   phases             RoadmapPhase[]
+  versionHistories   RoadmapVersionHistory[]
 
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([userId])
 }
@@ -1311,7 +1353,8 @@ model RoadmapPhase {
   id                 String        @id @default(uuid())
   roadmapId          String
   roadmap            Roadmap       @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  phaseNumber        Int           // 1 to 5
+  phaseNumber        Int           // 1 to 12
+  phaseKey           String        @default("PREPARATION") // e.g. "PREPARATION", "STUDENT_VISA_APPLICATION"
   timeframeNoticeBn  String        // "ইনটেকের ৯-১১ মাস পূর্বে"
   titleBn            String
   titleEn            String
@@ -1323,23 +1366,54 @@ model RoadmapPhase {
   updatedAt          DateTime      @updatedAt
 
   @@index([roadmapId])
+  @@index([phaseKey])
 }
 
 model RoadmapTask {
-  id           String       @id @default(uuid())
-  phaseId      String
-  phase        RoadmapPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
-  titleBn      String
-  titleEn      String
-  description  String?
-  isCompleted  Boolean      @default(false)
-  completedAt  DateTime?
-  actionUrl    String?
+  id                    String        @id @default(uuid())
+  phaseId               String
+  phase                 RoadmapPhase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  taskCode              String        @default("TASK_GENERAL") // e.g. "TASK_UK_BANK_28DAYS"
+  titleBn               String
+  titleEn               String
+  description           String?
+  bengaliExplanation   String?       @db.Text
+  whyItMattersBn        String?       @db.Text
+  requiredDocumentsJson String?       @db.Text // JSON Array of strings
+  estimatedCostBdt      Float         @default(0)
+  costCurrency          String        @default("BDT")
+  estimatedDurationDays Int           @default(7)
+  startDate             DateTime?
+  dueDate               DateTime?
+  priority              TaskPriority  @default(MEDIUM)
+  status                TaskStatus    @default(NOT_STARTED)
+  dependenciesJson      String?       @db.Text // JSON Array of prerequisite taskCodes
+  officialSourceUrl     String?
+  officialSourceOrg     String?
+  completionCriteriaBn  String?       @db.Text
+  needsReview           Boolean       @default(false)
+  actionUrl             String?
+  isCompleted           Boolean       @default(false)
+  completedAt           DateTime?
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   @@index([phaseId])
+  @@index([taskCode])
+  @@index([status])
+}
+
+model RoadmapVersionHistory {
+  id             String       @id @default(uuid())
+  roadmapId      String
+  roadmap        Roadmap      @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  versionNumber  Int
+  changeReasonBn String       // "কাঙ্ক্ষিত দেশ যুক্তরাজ্য থেকে জার্মানি পরিবর্তন করা হয়েছে"
+  snapshotJson   String       @db.Text // Serialized roadmap state
+  createdAt      DateTime     @default(now())
+
+  @@index([roadmapId])
 }
 
 model UserDocument {
@@ -1404,23 +1478,28 @@ model SavedFavorite {
 }
 
 model Deadline {
-  id                 String     @id @default(uuid())
+  id                 String           @id @default(uuid())
+  userId             String?          // null if global system deadline
+  user               User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   titleBn            String
   titleEn            String
-  category           String     // "SCHOLARSHIP", "UNIVERSITY", "TEST", "VISA"
+  deadlineType       DeadlineType     @default(APPLICATION_DEADLINE)
+  category           String           // "SCHOLARSHIP", "UNIVERSITY", "TEST", "VISA", "PERSONAL"
   countryCode        String?
   deadlineDate       DateTime
   officialUrl        String?
   notesBn            String?
-  isGlobal           Boolean    @default(true)
+  isGlobal           Boolean          @default(true)
+  isCompleted        Boolean          @default(false)
 
   reminders          Reminder[]
 
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([deadlineDate])
   @@index([category])
+  @@index([userId])
 }
 
 model Reminder {
