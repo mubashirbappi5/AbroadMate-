@@ -43,12 +43,17 @@ The Prisma schema (`packages/database/prisma/schema.prisma`) is organized into 6
 - **`AdmissionRequirement`**: Program-specific minimum CGPA, minimum IELTS overall and per-band requirement, GRE/GMAT necessity, and prerequisite subjects.
 - **`Scholarship`**: Verified government, university, and trust scholarships (Chevening, Commonwealth Shared, OGS, DAAD EPOS, Australia Awards, Fulbright), coverage type, monthly stipend amount, currency code, application deadline window, and official portal link.
 - **`ScholarshipEligibilityRule`**: Explicit rule constraints (minimum CGPA, allowed degree levels, eligible nationalities).
+- **`FundingDecisionLog`**: Audit history tracking student funding choices ("Scholarship নিয়ে যেতে চাই" vs "নিজের খরচে যেতে চাই"), covered vs uncovered expenses in BDT, and roadmap task injection with completed task preservation.
 
 ### Domain 4: Visa Policy, Historical Versioning & Research Verification
 - **`VisaRequirement`**: Parent record per country and visa subclass.
 - **`VisaRequirementVersion`**: Preserves historical policy versions without overwriting older data. Tracks version number, effective start date, effective end date, changelog summary in Bengali, and official gazette URL.
-- **`VisaFinancialRule`**: Required annual maintenance funds, currency code, minimum days funds must be held (e.g. UK 28-day rule), acceptable financial instruments, and unacceptable funds.
-- **`VisaDocumentRequirement`**: Mandatory vs conditional documents (TB test certificate, Police clearance, CAS/I-20, academic transcripts, bank solvency certificates, attestation rules).
+- **`VisaFinancialRule`**: Required annual maintenance funds, currency code, minimum days funds must be held (e.g. UK 28-day rule), bank statement duration, acceptable financial instruments, and sponsor rules.
+- **`VisaDocumentRequirement`**: Mandatory vs conditional documents (TB test certificate, Police clearance, CAS/I-20, academic transcripts, bank solvency certificates, attestation rules in Bangladesh).
+- **`VisaGeneralRequirement`**: General statutory conditions (CAS, SEVIS, B2/Goethe language levels, age constraints).
+- **`VisaWorkflowStep`**: Country-specific application process steps (CAS, Blocked Account, Form I-20, SEVIS, VFS Dhaka/Sylhet Biometrics, Embassy interview, arrival formalities).
+- **`CountryVisaGuide`**: Comprehensive 15-section authoritative guide per country.
+- **`VisaAssessmentLog`**: Audit log of student visa eligibility evaluations, verdict statuses, and financial gaps.
 - **`InformationSource`**: Anti-hallucination tracking table storing official government gazettes, embassy portals, and university admission pages.
 - **`SourceRecord`**: Scraped or captured official text snapshot, source URL, SHA-256 hash, and verification timestamp.
 - **`SourceChangeLog`**: Automatic diff detector capturing changes on official portals requiring manual review.
