@@ -11,6 +11,61 @@ import {
 } from "@abroadmate/database";
 import { adminScholarshipUpsertSchema } from "@abroadmate/validation";
 
+export async function GET(request: NextRequest) {
+  try {
+    await requireRole([
+      AppRole.SUPER_ADMIN,
+      AppRole.DATA_MANAGER,
+      AppRole.VERIFICATION_MANAGER,
+      AppRole.SUPPORT_ADMIN,
+      AppRole.CONTENT_MANAGER,
+    ]);
+
+    const { searchParams } = new URL(request.url);
+    const countryCode = searchParams.get("countryCode");
+    const search = searchParams.get("search");
+
+    const where: any = {};
+    if (countryCode) {
+      where.countryCode = countryCode;
+    }
+    if (search) {
+      where.OR = [
+        { titleEn: { contains: search, mode: "insensitive" } },
+        { titleBn: { contains: search, mode: "insensitive" } },
+        { providerName: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const scholarships = await prisma.scholarship.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        country: {
+          select: { code: true, nameEn: true, nameBn: true, flagEmoji: true },
+        },
+        eligibilityRules: true,
+      },
+      take: 100,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: scholarships,
+    });
+  } catch (error: any) {
+    const status = error.message?.includes("FORBIDDEN")
+      ? 403
+      : error.message?.includes("UNAUTHORIZED")
+      ? 401
+      : 500;
+    return NextResponse.json(
+      { success: false, error: error.message || "স্কলারশিপের তালিকা লোড করতে ব্যর্থ হয়েছে।" },
+      { status }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await requireRole([

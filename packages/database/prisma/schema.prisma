@@ -1245,6 +1245,8 @@ model InformationSource {
   visaRequirementId String?
   visaRequirement   VisaRequirement?    @relation(fields: [visaRequirementId], references: [id])
   
+  sourceCategory    String?             @default("GOVERNMENT_IMMIGRATION")
+  nextReviewDate    DateTime?
   status            VerificationStatus  @default(VERIFIED)
   lastVerifiedAt    DateTime            @default(now())
 
@@ -1257,6 +1259,7 @@ model InformationSource {
 
   @@index([officialUrl])
   @@index([status])
+  @@index([nextReviewDate])
 }
 
 model SourceRecord {
@@ -1621,16 +1624,19 @@ model AdminRole {
 }
 
 model AuditLog {
-  id           String      @id @default(uuid())
-  userId       String?
-  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action       AuditAction
-  resourceType String      // "USER", "VISA_REQUIREMENT", "SCHOLARSHIP", "DOCUMENT"
-  resourceId   String
-  ipAddress    String?
-  userAgent    String?
-  changesJson  String?     // Before/after state snapshot in JSON
-  createdAt    DateTime    @default(now())
+  id             String      @id @default(uuid())
+  userId         String?
+  user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         AuditAction
+  resourceType   String      // "USER", "VISA_REQUIREMENT", "SCHOLARSHIP", "DOCUMENT", "COUNTRY", "UNIVERSITY"
+  resourceId     String
+  ipAddress      String?
+  userAgent      String?
+  previousValue  String?     @db.Text
+  newValue       String?     @db.Text
+  changesJson    String?     // Before/after state snapshot in JSON
+  approvalStatus String?     // e.g. "APPROVED", "REJECTED", "PENDING"
+  createdAt      DateTime    @default(now())
 
   @@index([userId])
   @@index([resourceType, resourceId])
@@ -1656,19 +1662,22 @@ model DataReview {
 }
 
 model PolicyChangeApproval {
-  id                 String                 @id @default(uuid())
-  versionId          String
-  version            VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  proposedByUserId   String
-  proposedByUser     User                   @relation("PolicyProposerRelation", fields: [proposedByUserId], references: [id])
-  approvedByUserId   String?
-  approvedByUser     User?                  @relation("PolicyApproverRelation", fields: [approvedByUserId], references: [id])
-  approvalStatus     ReviewStatus           @default(PENDING)
-  decisionComment    String?
-  decidedAt          DateTime?
+  id                     String                 @id @default(uuid())
+  versionId              String
+  version                VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  proposedByUserId       String
+  proposedByUser         User                   @relation("PolicyProposerRelation", fields: [proposedByUserId], references: [id])
+  approvedByUserId       String?
+  approvedByUser         User?                  @relation("PolicyApproverRelation", fields: [approvedByUserId], references: [id])
+  approvalStatus         ReviewStatus           @default(PENDING)
+  decisionComment        String?
+  evidenceComparisonJson String?                @db.Text
+  affectedStudentsCount  Int?                   @default(0)
+  notifiedStudentsCount  Int?                   @default(0)
+  decidedAt              DateTime?
 
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
   @@index([versionId])
   @@index([approvalStatus])

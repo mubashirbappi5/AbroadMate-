@@ -164,6 +164,15 @@ export default function DashboardLayout({
       labelEn: "Settings",
       icon: Settings,
     },
+    {
+      href: "/dashboard/admin",
+      alternateHref: "/admin",
+      label: "ইন্টারনাল অ্যাডমিন ও রিসার্চ",
+      labelEn: "Admin & Research",
+      icon: ShieldCheck,
+      badge: "Staff",
+      badgeColor: "bg-indigo-100 text-indigo-800",
+    },
   ];
 
   const isLinkActive = (item: MenuItem) => {
