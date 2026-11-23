@@ -5,3 +5,4 @@ export * from "./i18n/bn";
 export * from "./i18n/en";
 export * from "./utils/currency";
 export * from "./utils/grade-converter";
+export * from "./utils/financial-planner";

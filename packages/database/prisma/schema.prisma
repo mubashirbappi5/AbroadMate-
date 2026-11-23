@@ -228,6 +228,7 @@ model User {
   savedFavorites     SavedFavorite[]
   fundingDecisions   FundingDecisionLog[]
   visaAssessments    VisaAssessmentLog[]
+  budgetPlans        BudgetPlan[]
   reviewedData       DataReview[]         @relation("ReviewerRelation")
   approvedPolicies   PolicyChangeApproval[] @relation("PolicyApproverRelation")
   proposedPolicies   PolicyChangeApproval[] @relation("PolicyProposerRelation")
@@ -456,6 +457,108 @@ model Sponsor {
   @@index([financialProfileId])
 }
 
+model BudgetPlan {
+  id                         String               @id @default(uuid())
+  userId                     String
+  user                       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                      String               @default("আমার স্টাডি বাজেট")
+  countryCode                String               // "GB", "CA", "AU", "DE", "US"
+  programId                  String?
+  program                    Program?             @relation(fields: [programId], references: [id], onDelete: SetNull)
+  degreeLevel                String               @default("MASTERS")
+  studyDurationYears         Float                @default(1.0)
+  
+  // Currency & Rate Auditing
+  currencyCode               String               // "GBP", "CAD", "AUD", "EUR", "USD"
+  exchangeRateToBdt          Float
+  exchangeRateSource         String               @default("বাংলাদেশ ব্যাংক / ওপেন মার্কেট রেফারেন্স")
+  exchangeRateTimestamp      DateTime             @default(now())
+
+  // Pre-departure Costs (BDT / Local)
+  appFeeTotalLocal           Float                @default(0)
+  languageTestFeeBdt         Float                @default(23500)
+  documentPrepFeeBdt         Float                @default(8000)
+  medicalExamFeeBdt          Float                @default(13500)
+  flightTicketBdt            Float                @default(90000)
+  initialSettlementLocal     Float                @default(0)
+
+  // Statutory Immigration Fees
+  visaApplicationFeeLocal    Float                @default(0)
+  biometricsFeeLocal         Float                @default(0)
+  healthInsuranceLocal       Float                @default(0)
+  countrySpecificCostsLocal  Float                @default(0)
+
+  // Academic & Living Costs
+  grossTuitionAnnualLocal    Float                @default(0)
+  tuitionDepositPaidLocal    Float                @default(0)
+  livingCostAnnualLocal      Float                @default(0)
+  accommodationAnnualLocal   Float                @default(0)
+  foodAnnualLocal            Float                @default(0)
+  transportAnnualLocal       Float                @default(0)
+  emergencyFundLocal         Float                @default(0)
+
+  // Financial Resources / Inflows
+  studentSavingsLocal        Float                @default(0)
+  sponsorContributionLocal   Float                @default(0)
+  educationLoanLocal         Float                @default(0)
+  scholarshipDeductionLocal  Float                @default(0)
+  monthlySavingsCapacityBdt  Float                @default(0)
+  monthsUntilDeparture       Int                  @default(6)
+
+  // Computed Outputs
+  firstYearTotalCostLocal    Float                @default(0)
+  firstYearTotalCostBdt      Float                @default(0)
+  totalDegreeCostLocal       Float                @default(0)
+  totalDegreeCostBdt         Float                @default(0)
+  totalAvailableFundsLocal   Float                @default(0)
+  totalAvailableFundsBdt     Float                @default(0)
+  fundingGapLocal            Float                @default(0)
+  fundingGapBdt              Float                @default(0)
+  targetMonthlySavingsBdt    Float                @default(0)
+  savingsFeasibility         String               @default("FEASIBLE") // "SURPLUS", "FEASIBLE", "CHALLENGING", "HIGH_GAP"
+
+  versionNumber              Int                  @default(1)
+  revisionNotes              String?
+  isActive                   Boolean              @default(true)
+
+  revisions                  BudgetPlanRevision[]
+
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([countryCode])
+  @@index([isActive])
+}
+
+model BudgetPlanRevision {
+  id                   String     @id @default(uuid())
+  planId               String
+  plan                 BudgetPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  versionNumber        Int
+  changeSummaryBn      String
+  snapshotJson         String     // Complete JSON serialized state of the plan at this version
+  fundingGapBdt        Float
+  firstYearTotalBdt    Float
+
+  createdAt            DateTime   @default(now())
+
+  @@index([planId])
+  @@index([versionNumber])
+}
+
+model ExchangeRateAudit {
+  id             String    @id @default(uuid())
+  currencyCode   String
+  rateToBdt      Float
+  sourceProvider String    @default("Bangladesh Bank Reference")
+  isVerified     Boolean   @default(true)
+  effectiveDate  DateTime  @default(now())
+
+  @@index([currencyCode])
+  @@index([effectiveDate])
+}
+
 model ImmigrationHistory {
   id                  String         @id @default(uuid())
   profileId           String
@@ -656,6 +759,7 @@ model Program {
   intakes               ProgramIntake[]
   sources               InformationSource[]
   savedByStudents       SavedFavorite[]
+  budgetPlans           BudgetPlan[]
 
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
