@@ -163,6 +163,22 @@ enum FundingChoiceType {
   SELF_FUNDED
 }
 
+enum RequirementMandatoryStatus {
+  MANDATORY
+  CONDITIONAL
+  NOT_APPLICABLE
+  UNKNOWN
+}
+
+enum VisaAssessmentVerdict {
+  PRELIMINARY_ELIGIBLE
+  REQUIREMENTS_MISSING
+  FINANCIAL_GAP
+  DOCUMENTS_MISSING
+  CONDITIONAL_REQUIREMENTS
+  UNABLE_TO_DETERMINE
+}
+
 enum ReminderChannel {
   EMAIL
   IN_APP
@@ -211,6 +227,7 @@ model User {
   adminRole          AdminRole?
   savedFavorites     SavedFavorite[]
   fundingDecisions   FundingDecisionLog[]
+  visaAssessments    VisaAssessmentLog[]
   reviewedData       DataReview[]         @relation("ReviewerRelation")
   approvedPolicies   PolicyChangeApproval[] @relation("PolicyApproverRelation")
   proposedPolicies   PolicyChangeApproval[] @relation("PolicyProposerRelation")
@@ -517,6 +534,8 @@ model Country {
   visaTypes               VisaType[]
   scholarships            Scholarship[]
   visaRequirements        VisaRequirement[]
+  visaWorkflowSteps       VisaWorkflowStep[]
+  visaGuide               CountryVisaGuide?
   sources                 InformationSource[]
   policyVersions          CountryPolicyVersion[]
 
@@ -551,21 +570,27 @@ model CountryPolicyVersion {
 }
 
 model VisaType {
-  id                 String              @id @default(uuid())
-  countryCode        String
-  country            Country             @relation(fields: [countryCode], references: [code])
-  visaCode           String              // e.g. "STUDENT_ROUTE", "STUDY_PERMIT", "SUBCLASS_500", "NATIONAL_D"
-  nameEn             String
-  nameBn             String
-  category           String              // "UNDERGRADUATE_POSTGRADUATE"
-  officialFeeAmount  Float
-  feeCurrencyCode    String
-  processingDaysAvg  Int                 @default(21)
+  id                     String              @id @default(uuid())
+  countryCode            String
+  country                Country             @relation(fields: [countryCode], references: [code])
+  visaCode               String              // e.g. "STUDENT_ROUTE", "STUDY_PERMIT", "SUBCLASS_500", "NATIONAL_D", "F1_STUDENT"
+  nameEn                 String
+  nameBn                 String
+  category               String              // "UNDERGRADUATE_POSTGRADUATE"
+  applicantType          String              @default("STUDENT") // "STUDENT", "DEPENDENT", "GUARDIAN"
+  purpose                String?             // "Higher Education / Degree Studies"
+  officialImmigrationUrl String?
+  applicationAuthority   String?             // "UK Visas and Immigration (UKVI)"
+  officialFeeAmount      Float
+  feeCurrencyCode        String
+  processingDaysAvg      Int                 @default(21)
+  lastVerifiedAt         DateTime            @default(now())
 
-  requirements       VisaRequirement[]
+  requirements           VisaRequirement[]
+  workflowSteps          VisaWorkflowStep[]
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@unique([countryCode, visaCode])
   @@index([countryCode])
@@ -896,14 +921,20 @@ model VisaRequirementVersion {
   visaRequirementId    String
   visaRequirement      VisaRequirement          @relation(fields: [visaRequirementId], references: [id], onDelete: Cascade)
   versionNumber        Int                      @default(1)
+  previousVersionId    String?
   effectiveFromDate    DateTime
   effectiveToDate      DateTime?                // NULL means currently active version
   isArchived           Boolean                  @default(false)
   changeSummaryBn      String
   officialGazetteUrl   String
+  sourceOrganization   String                   @default("Official Immigration Authority")
+  publishedDate        DateTime?
+  lastCheckedDate      DateTime                 @default(now())
+  verificationStatus   VerificationStatus       @default(VERIFIED)
 
   financialRules       VisaFinancialRule[]
   documentRequirements VisaDocumentRequirement[]
+  generalRequirements  VisaGeneralRequirement[]
   approvals            PolicyChangeApproval[]
 
   createdAt            DateTime                 @default(now())
@@ -914,39 +945,149 @@ model VisaRequirementVersion {
 }
 
 model VisaFinancialRule {
-  id                       String                 @id @default(uuid())
-  versionId                String
-  version                  VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  requiredLivingFunds      Float                  // Minimum amount required
-  fundsCurrencyCode        String
-  maintenancePeriodDays    Int                    @default(28) // e.g. UK 28-day rule
-  blockedAccountRequired   Boolean                @default(false)
-  monthlyLivingRate        Float?
-  acceptableInstrumentsBn  String                 // "অনুমোদিত সিডিউল ব্যাংক একাউন্টে সেভিংস বা ফিক্সড ডিপোজিট"
-  unacceptableFundsBn      String?                // "শেয়ার মার্কেট, প্রাইজবন্ড গ্রহণযোগ্য নয়"
+  id                        String                 @id @default(uuid())
+  versionId                 String
+  version                   VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  requiredLivingFunds       Float                  // Minimum amount required
+  tuitionFeeRuleBn          String                 @default("প্রথম বর্ষের অবশিষ্ট পূর্ণ টিউশন ফি") // Tuition Fee Requirement
+  fundsCurrencyCode         String
+  maintenancePeriodDays     Int                    @default(28) // e.g. UK 28-day rule
+  bankStatementPeriodMonths Int                    @default(1)  // Bank statement period
+  travelExpenseLocal        Float                  @default(0)  // Travel expense
+  dependentExpenseMonthly   Float                  @default(0)  // Dependent expense
+  blockedAccountRequired    Boolean                @default(false)
+  monthlyLivingRate         Float?
+  acceptedEvidenceBn        String                 @default("অনুমোদিত সিডিউল ব্যাংক একাউন্টে সেভিংস বা ফিক্সড ডিপোজিট")
+  sponsorConditionsBn       String                 @default("শিক্ষার্থী নিজে অথবা পিতা-মাতার স্পনসরশিপ")
+  scholarshipConditionsBn   String?
+  acceptableInstrumentsBn   String                 // "অনুমোদিত সিডিউল ব্যাংক একাউন্টে সেভিংস বা ফিক্সড ডিপোজিট"
+  unacceptableFundsBn       String?                // "শেয়ার মার্কেট, প্রাইজবন্ড গ্রহণযোগ্য নয়"
+  sourceUrl                 String?
+  effectiveDate             DateTime               @default(now())
 
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
 
   @@index([versionId])
 }
 
 model VisaDocumentRequirement {
-  id                 String                 @id @default(uuid())
+  id                 String                     @id @default(uuid())
   versionId          String
-  version            VisaRequirementVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  version            VisaRequirementVersion     @relation(fields: [versionId], references: [id], onDelete: Cascade)
   category           DocumentCategory
+  documentType       String                     @default("OTHER") // "PASSPORT", "ACADEMIC", "ADMISSION_CONFIRMATION", "FINANCIAL", "SPONSOR", "LANGUAGE_TEST", "MEDICAL", "POLICE_CLEARANCE", "HEALTH_INSURANCE", "COUNTRY_FORM", "OTHER"
   titleEn            String
   titleBn            String
-  isMandatory        Boolean                @default(true)
-  attestationRuleBn  String?                // "শিক্ষা মন্ত্রণালয় ও পররাষ্ট্র মন্ত্রণালয় সত্যায়ন"
+  isMandatory        Boolean                    @default(true)
+  requirementStatus  RequirementMandatoryStatus @default(MANDATORY)
+  conditionRuleBn    String?
+  attestationRuleBn  String?                    // "শিক্ষা মন্ত্রণালয় ও পররাষ্ট্র মন্ত্রণালয় সত্যায়ন"
   notesBn            String?
+  officialSourceUrl  String?
 
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
 
   @@index([versionId])
   @@index([category])
+  @@index([documentType])
+}
+
+model VisaGeneralRequirement {
+  id                  String                     @id @default(uuid())
+  versionId           String
+  version             VisaRequirementVersion     @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  nameEn              String
+  nameBn              String
+  descriptionBn       String
+  requirementStatus   RequirementMandatoryStatus @default(MANDATORY)
+  applicableApplicant String                     @default("STUDENT") // "STUDENT", "ALL"
+  applicableDegree    String                     @default("ALL")     // "BACHELORS", "MASTERS", "PHD", "ALL"
+  effectiveFrom       DateTime                   @default(now())
+  effectiveUntil      DateTime?
+  officialSourceUrl   String?
+  verificationStatus  VerificationStatus         @default(VERIFIED)
+
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  @@index([versionId])
+}
+
+model VisaWorkflowStep {
+  id                     String              @id @default(uuid())
+  visaTypeId             String
+  visaType               VisaType            @relation(fields: [visaTypeId], references: [id], onDelete: Cascade)
+  countryCode            String
+  country                Country             @relation(fields: [countryCode], references: [code])
+  stepOrder              Int
+  stageCode              String              // "ADMISSION_CONFIRMATION", "CAS", "STUDY_PERMIT_PAL", "COE", "BLOCKED_ACCOUNT", "I20", "SEVIS", "ONLINE_APPLICATION", "VISA_FEE", "BIOMETRICS", "MEDICAL", "INTERVIEW", "DECISION", "ARRIVAL"
+  titleEn                String
+  titleBn                String
+  descriptionBn          String
+  estimatedDurationDays  Int                 @default(7)
+  localAuthorityOrCenter String?             // "VFS Global Dhaka", "IOM Migration Health Assessment Center", "US Embassy Dhaka"
+  officialPortalUrl      String?
+
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([visaTypeId])
+  @@index([countryCode])
+  @@index([stepOrder])
+}
+
+model CountryVisaGuide {
+  id                   String              @id @default(uuid())
+  countryCode          String              @unique
+  country              Country             @relation(fields: [countryCode], references: [code])
+  visaOverviewBn       String
+  eligibilityBn        String
+  financialReqBn       String
+  sponsorRulesBn       String
+  requiredDocumentsBn  String
+  applicationProcessBn String
+  biometricsBn         String
+  medicalReqBn         String
+  feesBn               String
+  processingTimeBn     String
+  interviewGuideBn     String
+  workRightsBn         String
+  postStudyOptionsBn   String
+  refusalReapplyBn     String
+  officialSourcesBn    String
+  lastVerifiedAt       DateTime            @default(now())
+
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([countryCode])
+}
+
+model VisaAssessmentLog {
+  id                      String                @id @default(uuid())
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  countryCode             String
+  visaCode                String
+  verdictStatus           VisaAssessmentVerdict
+  tuitionRemaining        Float                 @default(0)
+  livingFundsRequired     Float                 @default(0)
+  totalFundsRequired      Float                 @default(0)
+  availableFundsTotal     Float                 @default(0)
+  financialGapAmount      Float                 @default(0)
+  currencyCode            String                @default("BDT")
+  missingRequirementsJson String?
+  missingDocumentsJson    String?
+  conditionsJson          String?
+  summaryBn               String
+
+  createdAt               DateTime              @default(now())
+
+  @@index([userId])
+  @@index([countryCode])
+  @@index([verdictStatus])
 }
 
 model InformationSource {

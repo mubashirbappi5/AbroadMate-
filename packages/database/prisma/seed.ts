@@ -7,6 +7,7 @@ import {
   VerificationStatus,
   ScholarshipProviderType,
   ScholarshipFundingType,
+  RequirementMandatoryStatus,
 } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -213,6 +214,10 @@ async function main() {
       nameEn: "Student Visa (Student Route)",
       nameBn: "স্টুডেন্ট রুট ভিসা",
       category: "UNDERGRADUATE_POSTGRADUATE",
+      applicantType: "STUDENT",
+      purpose: "Higher Education Degree Studies",
+      officialImmigrationUrl: "https://www.gov.uk/student-visa",
+      applicationAuthority: "UK Visas and Immigration (UKVI)",
       officialFeeAmount: 490.0,
       feeCurrencyCode: "GBP",
       processingDaysAvg: 21,
@@ -223,6 +228,10 @@ async function main() {
       nameEn: "Study Permit",
       nameBn: "স্টাডি পারমিট",
       category: "UNDERGRADUATE_POSTGRADUATE",
+      applicantType: "STUDENT",
+      purpose: "Post-Secondary Education in Canada",
+      officialImmigrationUrl: "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada.html",
+      applicationAuthority: "Immigration, Refugees and Citizenship Canada (IRCC)",
       officialFeeAmount: 150.0,
       feeCurrencyCode: "CAD",
       processingDaysAvg: 45,
@@ -233,6 +242,10 @@ async function main() {
       nameEn: "Student Visa (Subclass 500)",
       nameBn: "স্টুডেন্ট ভিসা (সাবক্লাস ৫০০)",
       category: "UNDERGRADUATE_POSTGRADUATE",
+      applicantType: "STUDENT",
+      purpose: "CRICOS Registered Higher Education",
+      officialImmigrationUrl: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500",
+      applicationAuthority: "Department of Home Affairs, Australia",
       officialFeeAmount: 1600.0,
       feeCurrencyCode: "AUD",
       processingDaysAvg: 30,
@@ -243,6 +256,10 @@ async function main() {
       nameEn: "National Visa for Study (Type D)",
       nameBn: "স্টাডি ন্যাশনাল ভিসা (টাইপ ডি)",
       category: "UNDERGRADUATE_POSTGRADUATE",
+      applicantType: "STUDENT",
+      purpose: "University Studies in Germany",
+      officialImmigrationUrl: "https://dhaka.diplo.de/bd-en/service/visa-einreise",
+      applicationAuthority: "German Embassy Dhaka / Auswärtiges Amt",
       officialFeeAmount: 75.0,
       feeCurrencyCode: "EUR",
       processingDaysAvg: 60,
@@ -253,6 +270,10 @@ async function main() {
       nameEn: "F-1 Nonimmigrant Student Visa",
       nameBn: "এফ-১ স্টুডেন্ট ভিসা",
       category: "UNDERGRADUATE_POSTGRADUATE",
+      applicantType: "STUDENT",
+      purpose: "Academic Studies at SEVP-certified Institution",
+      officialImmigrationUrl: "https://travel.state.gov/content/travel/en/us-visas/study/student-visa.html",
+      applicationAuthority: "U.S. Department of State / U.S. Embassy Dhaka",
       officialFeeAmount: 185.0,
       feeCurrencyCode: "USD",
       processingDaysAvg: 28,
@@ -260,7 +281,7 @@ async function main() {
   ];
 
   for (const vt of visaTypes) {
-    await prisma.visaType.upsert({
+    const vtRecord = await prisma.visaType.upsert({
       where: {
         countryCode_visaCode: {
           countryCode: vt.countryCode,
@@ -270,8 +291,147 @@ async function main() {
       update: vt,
       create: vt,
     });
+
+    // Check or create VisaRequirement
+    let vr = await prisma.visaRequirement.findFirst({
+      where: {
+        countryCode: vt.countryCode,
+        visaTypeId: vtRecord.id,
+      },
+    });
+
+    if (!vr) {
+      vr = await prisma.visaRequirement.create({
+        data: {
+          countryCode: vt.countryCode,
+          visaTypeId: vtRecord.id,
+          isCurrentActive: true,
+        },
+      });
+    }
+
+    // Check or create active VisaRequirementVersion
+    let vrv = await prisma.visaRequirementVersion.findFirst({
+      where: {
+        visaRequirementId: vr.id,
+        isArchived: false,
+      },
+    });
+
+    if (!vrv) {
+      vrv = await prisma.visaRequirementVersion.create({
+        data: {
+          visaRequirementId: vr.id,
+          versionNumber: 1,
+          effectiveFromDate: new Date("2024-01-01"),
+          isArchived: false,
+          changeSummaryBn: "অফিসিয়াল অভিবাসন নীতিমালা প্রারম্ভিক সংস্করণ ১.০",
+          officialGazetteUrl: vt.officialImmigrationUrl,
+          sourceOrganization: vt.applicationAuthority,
+          verificationStatus: VerificationStatus.VERIFIED,
+        },
+      });
+    }
+
+    // Seed VisaFinancialRule
+    let livingFunds = 10000;
+    let maintDays = 28;
+    let bankStatementMonths = 1;
+    let travelExp = 0;
+    let isBlocked = false;
+    let accInstruments = "তফসিলি ব্যাংকে সেভিংস বা ফিক্সড ডিপোজিট";
+    let sponsorRule = "শিক্ষার্থী নিজে অথবা পিতা-মাতার স্পনসরশিপ";
+
+    if (vt.countryCode === "GB") {
+      livingFunds = 9207; // 9 months outside London
+      maintDays = 28;
+      sponsorRule = "শুধুমাত্র শিক্ষার্থী বা পিতা-মাতা (অন্য আত্মীয় গ্রহণযোগ্য নয়)";
+    } else if (vt.countryCode === "DE") {
+      livingFunds = 11904;
+      maintDays = 0;
+      isBlocked = true;
+      accInstruments = "Expatrio, Coracle বা Fintiba ব্লকড একাউন্ট";
+      sponsorRule = "ব্লকড একাউন্ট ডিপোজিট অথবা জার্মানিতে বসবাসকারীর Verpflichtungserklärung";
+    } else if (vt.countryCode === "US") {
+      livingFunds = 15000;
+      maintDays = 0;
+      sponsorRule = "পিতা-মাতা অথবা হলফনামা (Form I-134) সহ রক্তের সম্পর্কের স্পনসর";
+    } else if (vt.countryCode === "CA") {
+      livingFunds = 20635;
+      maintDays = 120;
+      bankStatementMonths = 4;
+      sponsorRule = "পিতা-মাতার আয় ও কর সনদ (TIN) সহ ব্যাংক সলভেন্সি";
+    } else if (vt.countryCode === "AU") {
+      livingFunds = 29710;
+      maintDays = 90;
+      bankStatementMonths = 3;
+      travelExp = 2000;
+      sponsorRule = "পিতা-মাতা, স্বামী/স্ত্রী অথবা বাৎসরিক কর সনদ সহ ঘনিষ্ঠ অভিভাবক";
+    }
+
+    const existingFinRule = await prisma.visaFinancialRule.findFirst({
+      where: { versionId: vrv.id },
+    });
+    if (!existingFinRule) {
+      await prisma.visaFinancialRule.create({
+        data: {
+          versionId: vrv.id,
+          requiredLivingFunds: livingFunds,
+          tuitionFeeRuleBn: "প্রথম শিক্ষাবর্ষের অবশিষ্ট সম্পূর্ণ টিউশন ফি",
+          fundsCurrencyCode: vt.feeCurrencyCode,
+          maintenancePeriodDays: maintDays,
+          bankStatementPeriodMonths: bankStatementMonths,
+          travelExpenseLocal: travelExp,
+          blockedAccountRequired: isBlocked,
+          acceptedEvidenceBn: accInstruments,
+          sponsorConditionsBn: sponsorRule,
+          acceptableInstrumentsBn: accInstruments,
+          sourceUrl: vt.officialImmigrationUrl,
+        },
+      });
+    }
+
+    // Seed CountryVisaGuide
+    await prisma.countryVisaGuide.upsert({
+      where: { countryCode: vt.countryCode },
+      update: {
+        visaOverviewBn: `${vt.nameBn} একটি সম্পূর্ণ আইনি ও অফিসিয়াল শিক্ষা অভিবাসন পথ।`,
+        eligibilityBn: "বিশ্ববিদ্যালয়ের নিশ্চিত ভর্তি অফার এবং আর্থিক সচ্ছলতার প্রমাণ থাকা আবশ্যক।",
+        financialReqBn: `লিভিং খরচ বাবদ ন্যূনতম ${livingFunds.toLocaleString()} ${vt.feeCurrencyCode} এবং টিউশন ফি প্রদর্শন আবশ্যক।`,
+        sponsorRulesBn: sponsorRule,
+        requiredDocumentsBn: "মূল পাসপোর্ট, ভর্তি নিশ্চয়তাপত্র, ব্যাংক স্টেটমেন্ট, শিক্ষাগত সনদ ও মেডিকেল রিপোর্ট।",
+        applicationProcessBn: "অনলাইন পোর্টালের মাধ্যমে আবেদন ও ফি পরিশোধের পর বায়োমেট্রিক স্লট বুকিং করতে হয়।",
+        biometricsBn: "ঢাকায় অবস্থিত ভিএফএস গ্লোবাল বা সংশ্লিষ্ট দূতাবাসে ফিঙ্গারপ্রিন্ট ও ছবি গ্রহণ করা হয়।",
+        medicalReqBn: vt.countryCode === "GB" || vt.countryCode === "AU" ? "আইওএম (IOM) যক্ষ্মা/টিবি পরীক্ষা বাধ্যতামূলক।" : "স্বাস্থ্য বীমা ও নিয়মিত পরীক্ষা প্রযোজ্য।",
+        feesBn: `ভিসা আবেদন ফি: ${vt.officialFeeAmount} ${vt.feeCurrencyCode}`,
+        processingTimeBn: `গড় প্রসেসিং সময়: ${vt.processingDaysAvg} কার্যদিবস।`,
+        interviewGuideBn: vt.countryCode === "US" || vt.countryCode === "DE" ? "দূতাবাসে সরাসরি ইন্টারভিউ বাধ্যতামূলক।" : "প্রয়োজনে ক্রেডিবিলিটি ইন্টারভিউ নেওয়া হতে পারে।",
+        workRightsBn: "সেমিস্টার চলাকালীন পার্ট-টাইম (সপ্তাহে ২০-২৪ ঘণ্টা) কাজের আইনগত অধিকার থাকে।",
+        postStudyOptionsBn: "ডিগ্রি সম্পন্ন করার পর পোস্ট-স্টাডি ওয়ার্ক পারমিট বা জব সিকার রেসিডেন্স সুবিধা পাওয়া যায়।",
+        refusalReapplyBn: "ভিসা প্রত্যাখ্যাত হলে অতীতের রিফিউজাল কখনো গোপন করা যাবে না; কারণ সমাধান করে পুনরায় আবেদন করা যায়।",
+        officialSourcesBn: `অফিসিয়াল পোর্টাল: ${vt.officialImmigrationUrl}`,
+      },
+      create: {
+        countryCode: vt.countryCode,
+        visaOverviewBn: `${vt.nameBn} একটি সম্পূর্ণ আইনি ও অফিসিয়াল শিক্ষা অভিবাসন পথ।`,
+        eligibilityBn: "বিশ্ববিদ্যালয়ের নিশ্চিত ভর্তি অফার এবং আর্থিক সচ্ছলতার প্রমাণ থাকা আবশ্যক।",
+        financialReqBn: `লিভিং খরচ বাবদ ন্যূনতম ${livingFunds.toLocaleString()} ${vt.feeCurrencyCode} এবং টিউশন ফি প্রদর্শন আবশ্যক।`,
+        sponsorRulesBn: sponsorRule,
+        requiredDocumentsBn: "মূল পাসপোর্ট, ভর্তি নিশ্চয়তাপত্র, ব্যাংক স্টেটমেন্ট, শিক্ষাগত সনদ ও মেডিকেল রিপোর্ট।",
+        applicationProcessBn: "অনলাইন পোর্টালের মাধ্যমে আবেদন ও ফি পরিশোধের পর বায়োমেট্রিক স্লট বুকিং করতে হয়।",
+        biometricsBn: "ঢাকায় অবস্থিত ভিএফএস গ্লোবাল বা সংশ্লিষ্ট দূতাবাসে ফিঙ্গারপ্রিন্ট ও ছবি গ্রহণ করা হয়।",
+        medicalReqBn: vt.countryCode === "GB" || vt.countryCode === "AU" ? "আইওএম (IOM) যক্ষ্মা/টিবি পরীক্ষা বাধ্যতামূলক।" : "স্বাস্থ্য বীমা ও নিয়মিত পরীক্ষা প্রযোজ্য।",
+        feesBn: `ভিসা আবেদন ফি: ${vt.officialFeeAmount} ${vt.feeCurrencyCode}`,
+        processingTimeBn: `গড় প্রসেসিং সময়: ${vt.processingDaysAvg} কার্যদিবস।`,
+        interviewGuideBn: vt.countryCode === "US" || vt.countryCode === "DE" ? "দূতাবাসে সরাসরি ইন্টারভিউ বাধ্যতামূলক।" : "প্রয়োজনে ক্রেডিবিলিটি ইন্টারভিউ নেওয়া হতে পারে।",
+        workRightsBn: "সেমিস্টার চলাকালীন পার্ট-টাইম (সপ্তাহে ২০-২৪ ঘণ্টা) কাজের আইনগত অধিকার থাকে।",
+        postStudyOptionsBn: "ডিগ্রি সম্পন্ন করার পর পোস্ট-স্টাডি ওয়ার্ক পারমিট বা জব সিকার রেসিডেন্স সুবিধা পাওয়া যায়।",
+        refusalReapplyBn: "ভিসা প্রত্যাখ্যাত হলে অতীতের রিফিউজাল কখনো গোপন করা যাবে না; কারণ সমাধান করে পুনরায় আবেদন করা যায়।",
+        officialSourcesBn: `অফিসিয়াল পোর্টাল: ${vt.officialImmigrationUrl}`,
+      },
+    });
   }
-  console.log(`✅ Upserted ${visaTypes.length} student visa subclasses.`);
+  console.log(`✅ Upserted ${visaTypes.length} student visa subclasses, financial rules & 15-section country guides.`);
 
   // 3. Seed Verified Flagship Universities & Programs across UK, CA, AU, DE, US
   const universities = [

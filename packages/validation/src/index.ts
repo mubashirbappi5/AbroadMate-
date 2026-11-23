@@ -7,3 +7,4 @@ export * from "./admin.schema";
 export * from "./onboarding.schema";
 export * from "./discovery.schema";
 export * from "./scholarship.schema";
+export * from "./visa.schema";
