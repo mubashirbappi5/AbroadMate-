@@ -6,3 +6,4 @@ export * from "./i18n/en";
 export * from "./utils/currency";
 export * from "./utils/grade-converter";
 export * from "./utils/financial-planner";
+export * from "./utils/deadline-calculator";
