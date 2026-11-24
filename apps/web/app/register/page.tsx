@@ -83,12 +83,12 @@ export default function RegisterPage() {
         body: JSON.stringify({
           fullName: formData.fullName.trim(),
           email: formData.email.trim().toLowerCase(),
-          phone: formData.phone.trim(),
+          phone: formData.phone.trim() || undefined,
           password: formData.password,
+          confirmPassword: formData.confirmPassword,
           targetIntakeSeason: "FALL",
           targetIntakeYear: 2026,
-          agreedToTerms: true,
-          agreedToEthicalUse: true,
+          ethicalNonAgencyConsent: true,
         }),
       });
 

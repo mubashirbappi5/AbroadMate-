@@ -4,7 +4,9 @@
   "regions": ["sin1"],
   "cleanUrls": true,
   "trailingSlash": false,
-  "buildCommand": "pnpm --filter @abroadmate/web build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @abroadmate/database db:generate && pnpm --filter @abroadmate/web build",
+  "outputDirectory": "apps/web/.next",
   "headers": [
     {
       "source": "/(.*)",

@@ -5,7 +5,7 @@
   "description": "Free Bengali-first AI-powered Study Abroad Guidance Platform for Bangladeshi Students",
   "scripts": {
     "dev": "pnpm --filter @abroadmate/web dev",
-    "build": "pnpm --filter @abroadmate/web build",
+    "build": "pnpm --filter @abroadmate/database db:generate && pnpm --filter @abroadmate/web build",
     "start": "pnpm --filter @abroadmate/web start",
     "lint": "pnpm --filter \"@abroadmate/*\" lint",
     "type-check": "pnpm --filter \"@abroadmate/*\" type-check",
