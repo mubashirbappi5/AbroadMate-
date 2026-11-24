@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n-context";
@@ -27,7 +27,19 @@ import {
 export function Navbar() {
   const { t, locale, toggleLocale } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sessionUser, setSessionUser] = useState<{ fullName: string } | null>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          setSessionUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const publicNavLinks = [
     { href: "/how-it-works", label: "কিভাবে কাজ করে", icon: Workflow },
@@ -98,23 +110,33 @@ export function Navbar() {
               <span>{locale === "bn" ? "English" : "বাংলা"}</span>
             </button>
 
-            {/* Login Link */}
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-transparent transition-colors"
-            >
-              <LogIn className="w-3.5 h-3.5 text-slate-500" />
-              <span>লগইন</span>
-            </Link>
-
-            {/* Register / Dashboard Link */}
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-1.5 bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-xs transition-colors shadow-brand-700/20"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>{t.nav.dashboard}</span>
-            </Link>
+            {/* User Navigation / CTA */}
+            {sessionUser ? (
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1.5 bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-xs transition-colors shadow-brand-700/20"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>{sessionUser.fullName.split(" ")[0]} ({t.nav.dashboard})</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-transparent transition-colors"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-slate-500" />
+                  <span>লগইন</span>
+                </Link>
+                <Link
+                  href="/register"
+                  className="flex items-center gap-1.5 bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-xs transition-colors shadow-brand-700/20"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>ফ্রি রেজিস্ট্রেশন</span>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}

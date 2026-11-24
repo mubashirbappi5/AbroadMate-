@@ -49,100 +49,73 @@ export default function ProfilePage() {
   const [editingSection, setEditingSection] = useState<string | null>(null);
 
   // Completion Score
-  const [completionScore, setCompletionScore] = useState(75);
+  const [completionScore, setCompletionScore] = useState(25);
   const [missingRequired, setMissingRequired] = useState<string[]>([]);
   const [missingRecommended, setMissingRecommended] = useState<string[]>([]);
   const [optionalOpportunities, setOptionalOpportunities] = useState<string[]>([]);
   const [documentStatus, setDocumentStatus] = useState({
-    totalUploaded: 2,
-    needsVerification: 2,
+    totalUploaded: 0,
+    needsVerification: 0,
     verified: 0,
   });
 
   // Section 1: Basic Info
-  const [fullName, setFullName] = useState("সাকিব আহমেদ");
-  const [email, setEmail] = useState("sakib.student@gmail.com");
-  const [phone, setPhone] = useState("01712345678");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [alternatePhone, setAlternatePhone] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("2002-05-14");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [nationality, setNationality] = useState("Bangladeshi");
   const [currentCountry, setCurrentCountry] = useState("Bangladesh");
-  const [currentCity, setCurrentCity] = useState("ঢাকা");
-  const [hasPassport, setHasPassport] = useState(true);
-  const [passportNumber, setPassportNumber] = useState("A01234567");
-  const [passportExpiryDate, setPassportExpiryDate] = useState("2028-08-20");
+  const [currentCity, setCurrentCity] = useState("");
+  const [hasPassport, setHasPassport] = useState(false);
+  const [passportNumber, setPassportNumber] = useState("");
+  const [passportExpiryDate, setPassportExpiryDate] = useState("");
 
   // Section 2: Education
   const [highestLevel, setHighestLevel] = useState("bachelor_passed");
-  const [academicRecords, setAcademicRecords] = useState<AcademicRecordItem[]>([
-    {
-      level: "BACHELOR",
-      institutionName: "ড্যাফোডিল ইন্টারন্যাশনাল ইউনিভার্সিটি",
-      boardOrAuthority: "UGC / DIU",
-      groupOrMajor: "কম্পিউটার সায়েন্স অ্যান্ড ইঞ্জিনিয়ারিং (CSE)",
-      gpaOrCgpa: 3.65,
-      scale: 4.0,
-      startYear: 2020,
-      passingYear: 2024,
-      resultStatus: "PASSED",
-      hasBacklogs: false,
-      backlogsCount: 0,
-    },
-    {
-      level: "HSC",
-      institutionName: "ঢাকা রেসিডেনসিয়াল মডেল কলেজ",
-      boardOrAuthority: "ঢাকা বোর্ড",
-      groupOrMajor: "বিজ্ঞান (Science)",
-      gpaOrCgpa: 5.0,
-      scale: 5.0,
-      startYear: 2017,
-      passingYear: 2019,
-      resultStatus: "PASSED",
-      hasBacklogs: false,
-      backlogsCount: 0,
-    },
-  ]);
+  const [academicRecords, setAcademicRecords] = useState<AcademicRecordItem[]>([]);
 
   // Section 3: Language Proficiency
-  const [hasTakenTest, setHasTakenTest] = useState(true);
-  const [testType, setTestType] = useState<"IELTS" | "PTE" | "TOEFL" | "DUOLINGO" | "MOI" | "NOT_TAKEN">("IELTS");
-  const [overallScore, setOverallScore] = useState(7.0);
-  const [listeningScore, setListeningScore] = useState(7.5);
-  const [readingScore, setReadingScore] = useState(7.0);
-  const [writingScore, setWritingScore] = useState(6.5);
-  const [speakingScore, setSpeakingScore] = useState(7.0);
-  const [testDate, setTestDate] = useState("2024-10-15");
-  const [expiryDate, setExpiryDate] = useState("2026-10-15");
-  const [trfNumber, setTrfNumber] = useState("24BD001234S");
+  const [hasTakenTest, setHasTakenTest] = useState(false);
+  const [testType, setTestType] = useState<"IELTS" | "PTE" | "TOEFL" | "DUOLINGO" | "MOI" | "NOT_TAKEN">("NOT_TAKEN");
+  const [overallScore, setOverallScore] = useState<number>(0);
+  const [listeningScore, setListeningScore] = useState<number>(0);
+  const [readingScore, setReadingScore] = useState<number>(0);
+  const [writingScore, setWritingScore] = useState<number>(0);
+  const [speakingScore, setSpeakingScore] = useState<number>(0);
+  const [testDate, setTestDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [trfNumber, setTrfNumber] = useState("");
   const [plannedTestDate, setPlannedTestDate] = useState("");
 
   // Section 4: Study Preferences
   const [desiredDegreeLevel, setDesiredDegreeLevel] = useState<"BACHELOR" | "MASTER" | "PHD">("MASTER");
-  const [preferredSubject, setPreferredSubject] = useState("Data Science & Artificial Intelligence");
-  const [targetCountryCodes, setTargetCountryCodes] = useState<string[]>(["GB", "CA"]);
+  const [preferredSubject, setPreferredSubject] = useState("");
+  const [targetCountryCodes, setTargetCountryCodes] = useState<string[]>(["GB"]);
   const [targetIntakeSeason, setTargetIntakeSeason] = useState<"FALL" | "SPRING" | "SUMMER">("FALL");
   const [targetIntakeYear, setTargetIntakeYear] = useState<number>(2026);
   const [studyMode, setStudyMode] = useState<"FULL_TIME" | "PART_TIME" | "HYBRID">("FULL_TIME");
-  const [academicGoals, setAcademicGoals] = useState("মাস্টার্সে অ্যাডভান্সড মেশিন লার্নিং ও বিগ ডেটা নিয়ে গবেষণা করা।");
-  const [careerGoals, setCareerGoals] = useState("পড়াশোনা শেষে শীর্ষ প্রযুক্তি প্রতিষ্ঠানে এআই ইঞ্জিনিয়ার হিসেবে কাজ করা।");
+  const [academicGoals, setAcademicGoals] = useState("");
+  const [careerGoals, setCareerGoals] = useState("");
 
   // Section 5: Financial Background
-  const [annualTuitionBudget, setAnnualTuitionBudget] = useState<number>(2800000);
+  const [annualTuitionBudget, setAnnualTuitionBudget] = useState<number>(0);
   const [budgetCurrencyCode, setBudgetCurrencyCode] = useState<string>("BDT");
-  const [liquidSavingsAmount, setLiquidSavingsAmount] = useState<number>(3200000);
-  const [primaryBankName, setPrimaryBankName] = useState("ইস্টার্ন ব্যাংক পিএলসি (EBL)");
+  const [liquidSavingsAmount, setLiquidSavingsAmount] = useState<number>(0);
+  const [primaryBankName, setPrimaryBankName] = useState("");
   const [fundingStrategyType, setFundingStrategyType] = useState<"SELF" | "PARTIAL_SCHOLARSHIP" | "FULL_SCHOLARSHIP" | "SELF_AND_FAMILY">("SELF_AND_FAMILY");
-  const [hasSponsor, setHasSponsor] = useState(true);
+  const [hasSponsor, setHasSponsor] = useState(false);
   const [sponsorRelationship, setSponsorRelationship] = useState<"FATHER" | "MOTHER" | "SPOUSE" | "SELF" | "SIBLING" | "ORGANIZATION" | "GOVERNMENT" | "OTHER">("FATHER");
-  const [sponsorName, setSponsorName] = useState("মো: রফিকুল ইসলাম");
-  const [sponsorOccupation, setSponsorOccupation] = useState("ব্যবসায়ী ও রফতানিকারক");
-  const [annualSponsorIncome, setAnnualSponsorIncome] = useState<number>(1800000);
+  const [sponsorName, setSponsorName] = useState("");
+  const [sponsorOccupation, setSponsorOccupation] = useState("");
+  const [annualSponsorIncome, setAnnualSponsorIncome] = useState<number>(0);
   const [scholarshipPreference, setScholarshipPreference] = useState<"FULL_ONLY" | "PARTIAL_OK" | "NO_NEED">("PARTIAL_OK");
   const [educationLoanInterest, setEducationLoanInterest] = useState<"EXPLORING" | "APPLIED" | "NOT_INTERESTED">("EXPLORING");
 
   // Section 6: Immigration History
-  const [hasTravelHistory, setHasTravelHistory] = useState(true);
-  const [travelHistorySummary, setTravelHistorySummary] = useState("ভারত ও মালয়েশিয়া (২০২২, পর্যটন ভিসা)");
+  const [hasTravelHistory, setHasTravelHistory] = useState(false);
+  const [travelHistorySummary, setTravelHistorySummary] = useState("");
   const [hasPreviousRefusal, setHasPreviousRefusal] = useState(false);
   const [refusalReasonNotice, setRefusalReasonNotice] = useState("");
   const [hasViolations, setHasViolations] = useState(false);

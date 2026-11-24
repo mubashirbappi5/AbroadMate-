@@ -1,5 +1,9 @@
+import { cookies } from "next/headers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { prisma, AppRole, User } from "@abroadmate/database";
+import { verifySessionToken } from "./password";
+
+export const SESSION_COOKIE_NAME = "abroadmate_session";
 
 export interface AuthenticatedUserSession {
   user: User & {
@@ -12,68 +16,105 @@ export interface AuthenticatedUserSession {
 }
 
 /**
- * Derives authenticated user strictly from server-verified Supabase session.
+ * Derives authenticated user strictly from server-verified session cookie or Supabase session.
  * Never trusts client-supplied user IDs.
  */
 export async function getAuthenticatedUser(): Promise<AuthenticatedUserSession | null> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user: supabaseUser },
-      error,
-    } = await supabase.auth.getUser();
+    // 1. Check direct PostgreSQL secure session cookie first
+    try {
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-    if (error || !supabaseUser || !supabaseUser.email) {
-      return null;
-    }
-
-    // Look up or link user record in PostgreSQL via Prisma
-    let dbUser = await prisma.user.findUnique({
-      where: { supabaseId: supabaseUser.id },
-      include: {
-        roles: true,
-      },
-    });
-
-    // If user exists in Supabase Auth but not yet in PostgreSQL (e.g. freshly verified OAuth/Email),
-    // automatically provision the base record in PostgreSQL
-    if (!dbUser) {
-      dbUser = await prisma.user.create({
-        data: {
-          supabaseId: supabaseUser.id,
-          email: supabaseUser.email,
-          fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email.split("@")[0],
-          phone: supabaseUser.user_metadata?.phone || null,
-          primaryRole: AppRole.STUDENT,
-          roles: {
-            create: {
-              role: AppRole.STUDENT,
+      if (sessionCookie) {
+        const payload = verifySessionToken(sessionCookie);
+        if (payload?.userId) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: payload.userId },
+            include: {
+              roles: true,
             },
+          });
+
+          if (dbUser && dbUser.isActive && !dbUser.deletedAt) {
+            return {
+              user: dbUser,
+              supabaseUser: {
+                id: dbUser.supabaseId || dbUser.id,
+                email: dbUser.email,
+              },
+            };
+          }
+        }
+      }
+    } catch (cookieErr) {
+      // If called outside request context or cookie failure, fall through to Supabase
+    }
+
+    // 2. Check Supabase Auth session as fallback / dual-mode
+    try {
+      const supabase = await createServerSupabaseClient();
+      const {
+        data: { user: supabaseUser },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (!error && supabaseUser && supabaseUser.email) {
+        // Look up or link user record in PostgreSQL via Prisma
+        let dbUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { supabaseId: supabaseUser.id },
+              { email: supabaseUser.email },
+            ],
           },
-          settings: {
-            create: {
-              preferredLang: "BN",
-              currencyPreference: "BDT",
+          include: {
+            roles: true,
+          },
+        });
+
+        // Auto-provision in PostgreSQL if needed
+        if (!dbUser) {
+          dbUser = await prisma.user.create({
+            data: {
+              supabaseId: supabaseUser.id,
+              email: supabaseUser.email,
+              fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email.split("@")[0],
+              phone: supabaseUser.user_metadata?.phone || null,
+              primaryRole: AppRole.STUDENT,
+              roles: {
+                create: {
+                  role: AppRole.STUDENT,
+                },
+              },
+              settings: {
+                create: {
+                  preferredLang: "BN",
+                  currencyPreference: "BDT",
+                },
+              },
             },
-          },
-        },
-        include: {
-          roles: true,
-        },
-      });
+            include: {
+              roles: true,
+            },
+          });
+        }
+
+        if (dbUser && dbUser.isActive && !dbUser.deletedAt) {
+          return {
+            user: dbUser,
+            supabaseUser: {
+              id: supabaseUser.id,
+              email: supabaseUser.email,
+            },
+          };
+        }
+      }
+    } catch {
+      // Supabase unavailable or mock
     }
 
-    if (!dbUser.isActive || dbUser.deletedAt) {
-      return null;
-    }
-
-    return {
-      user: dbUser,
-      supabaseUser: {
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-      },
-    };
+    return null;
   } catch (err) {
     console.error("Error verifying authenticated session:", err);
     return null;

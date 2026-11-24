@@ -51,7 +51,7 @@ export default function RegisterPage() {
 
   const strength = calculatePasswordStrength(formData.password);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -76,11 +76,35 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
-    // Simulate signup and auto-login
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim().toLowerCase(),
+          phone: formData.phone.trim(),
+          password: formData.password,
+          targetIntakeSeason: "FALL",
+          targetIntakeYear: 2026,
+          agreedToTerms: true,
+          agreedToEthicalUse: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error || "রেজিস্ট্রেশন সম্পন্ন করা সম্ভব হয়নি। আবার চেষ্টা করুন।");
+        setIsLoading(false);
+        return;
+      }
+
       router.push("/dashboard");
-    }, 800);
+      router.refresh();
+    } catch (err) {
+      setErrorMessage("সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+      setIsLoading(false);
+    }
   };
 
   return (

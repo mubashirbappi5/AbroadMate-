@@ -76,7 +76,8 @@ CREATE TYPE "NotificationType" AS ENUM ('INFO', 'WARNING', 'DEADLINE_ALERT', 'SC
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "supabaseId" TEXT NOT NULL,
+    "supabaseId" TEXT,
+    "passwordHash" TEXT,
     "email" TEXT NOT NULL,
     "fullName" TEXT NOT NULL,
     "phone" TEXT,

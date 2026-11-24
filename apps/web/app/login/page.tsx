@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     if (!email || !password) {
@@ -36,11 +36,27 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
-    // Simulate auth verification and route to dashboard
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error || "ভুল ইমেইল অথবা পাসওয়ার্ড দেওয়া হয়েছে। আবার চেষ্টা করুন।");
+        setIsLoading(false);
+        return;
+      }
       router.push("/dashboard");
-    }, 700);
+      router.refresh();
+    } catch (err) {
+      setErrorMessage("সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+      setIsLoading(false);
+    }
   };
 
   const handleMagicLinkSubmit = (e: React.FormEvent) => {

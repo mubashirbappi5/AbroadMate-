@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { loginSchema } from "@abroadmate/validation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { prisma, AuditAction } from "@abroadmate/database";
+import { verifyPassword, signSessionToken } from "@/lib/auth/password";
+import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,14 +22,18 @@ export async function POST(request: NextRequest) {
     }
 
     const { email, password } = validation.data;
-    const supabase = await createServerSupabaseClient();
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // 1. Retrieve user from PostgreSQL
+    const dbUser = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        roles: true,
+        settings: true,
+        studentProfile: true,
+      },
     });
 
-    if (authError || !authData.user) {
+    if (!dbUser || !dbUser.isActive || dbUser.deletedAt) {
       return NextResponse.json(
         {
           success: false,
@@ -37,27 +43,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retrieve database user
-    const dbUser = await prisma.user.findUnique({
-      where: { supabaseId: authData.user.id },
-      include: {
-        roles: true,
-        settings: true,
-        studentProfile: true,
-      },
-    });
+    let authenticated = false;
 
-    if (!dbUser || !dbUser.isActive) {
+    // 2. Direct password verification
+    if (dbUser.passwordHash) {
+      authenticated = await verifyPassword(password, dbUser.passwordHash);
+    }
+
+    // 3. Fallback to Supabase Auth if passwordHash not matched or not set
+    if (!authenticated) {
+      try {
+        const supabase = await createServerSupabaseClient();
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (!authError && authData.user) {
+          authenticated = true;
+        }
+      } catch {
+        // Supabase offline/mock
+      }
+    }
+
+    if (!authenticated) {
       return NextResponse.json(
         {
           success: false,
-          error: "এই একাউন্টটি বর্তমানে স্থগিত অথবা নিষ্ক্রিয় রয়েছে।",
+          error: "ভুল ইমেইল অথবা পাসওয়ার্ড দেওয়া হয়েছে। আবার চেষ্টা করুন।",
         },
-        { status: 403 }
+        { status: 401 }
       );
     }
 
-    // Record session metadata & audit log asynchronously
+    // 4. Record session metadata & audit log asynchronously
     const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
     const userAgent = request.headers.get("user-agent");
 
@@ -76,14 +95,21 @@ export async function POST(request: NextRequest) {
           userId: dbUser.id,
           action: AuditAction.LOGIN,
           resourceType: "SESSION",
-          resourceId: authData.user.id,
+          resourceId: dbUser.id,
           ipAddress: ip,
           userAgent,
         },
       }),
     ]);
 
-    return NextResponse.json({
+    // 5. Issue signed session token
+    const token = signSessionToken({
+      userId: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.primaryRole,
+    });
+
+    const response = NextResponse.json({
       success: true,
       message: "সফলভাবে লগইন হয়েছে!",
       data: {
@@ -96,12 +122,23 @@ export async function POST(request: NextRequest) {
         profileCompleted: dbUser.studentProfile?.completionPercentage || 0,
       },
     });
+
+    // Set HTTP-only secure cookie
+    response.cookies.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    return response;
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: "সার্ভারে সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।",
+        error: "লগইন করার সময় একটি অপ্রত্যাশিত ত্রুটি ঘটেছে।",
       },
       { status: 500 }
     );

@@ -67,7 +67,7 @@ export default function GoalsPage() {
     );
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       localStorage.setItem(
@@ -84,6 +84,24 @@ export default function GoalsPage() {
           cityPreference,
         })
       );
+
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "studyPreferences",
+          data: {
+            desiredDegreeLevel: degreeLevel.toUpperCase(),
+            preferredSubject: targetMajor,
+            targetCountryCodes: selectedCountries,
+            preferredIntakeSeason: targetIntake.toUpperCase(),
+            preferredIntakeYear: targetYear,
+            studyMode: "FULL_TIME",
+            academicGoals: `${degreeLevel} in ${targetMajor}`,
+            careerGoals: `Study abroad in ${targetMajor}`,
+          },
+        }),
+      });
     } catch (e) {
       // ignore
     }

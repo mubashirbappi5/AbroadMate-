@@ -229,7 +229,8 @@ enum NotificationType {
 
 model User {
   id                 String               @id @default(uuid())
-  supabaseId         String               @unique // Maps directly to Supabase Auth UID
+  supabaseId         String?              @unique // Maps directly to Supabase Auth UID if integrated
+  passwordHash       String?              // Salted cryptographic hash for direct PostgreSQL authentication
   email              String               @unique
   fullName           String
   phone              String?

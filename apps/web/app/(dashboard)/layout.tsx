@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n-context";
 import {
   LayoutDashboard,
@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 
 interface MenuItem {
@@ -46,7 +47,46 @@ export default function DashboardLayout({
 }) {
   const { locale, toggleLocale } = useI18n();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ fullName: string; email: string } | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchUserContext() {
+      try {
+        const [sessRes, profRes] = await Promise.allSettled([
+          fetch("/api/auth/session"),
+          fetch("/api/profile"),
+        ]);
+        if (sessRes.status === "fulfilled") {
+          const sJson = await sessRes.value.json();
+          if (sJson.authenticated && sJson.user) {
+            setCurrentUser(sJson.user);
+          }
+        }
+        if (profRes.status === "fulfilled") {
+          const pJson = await profRes.value.json();
+          if (pJson.success && pJson.data) {
+            setCurrentProfile(pJson.data);
+          }
+        }
+      } catch (e) {
+        // silent fallback
+      }
+    }
+    fetchUserContext();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    router.push("/login");
+    router.refresh();
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -225,7 +265,7 @@ export default function DashboardLayout({
           </Link>
           <Link href="/dashboard/profile" className="flex items-center">
             <div className="w-7 h-7 rounded-full bg-brand-700 text-white text-[11px] font-bold flex items-center justify-center">
-              সা
+              {(currentUser?.fullName?.trim() || "AM").slice(0, 2)}
             </div>
           </Link>
         </div>
@@ -264,19 +304,28 @@ export default function DashboardLayout({
               <div className="p-3 bg-brand-50/90 border border-brand-200 rounded-xl">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-full bg-brand-700 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                    সাকিব
+                    {(currentUser?.fullName?.trim() || "AM").slice(0, 2)}
                   </div>
                   <div className="overflow-hidden">
-                    <span className="text-xs font-bold text-slate-900 block truncate">সাকিব আহমেদ</span>
-                    <span className="text-[10px] text-brand-800 font-semibold block truncate">ফল ২০২৬ (মাস্টার্স)</span>
+                    <span className="text-xs font-bold text-slate-900 block truncate">
+                      {currentUser?.fullName || (locale === "bn" ? "শিক্ষার্থী" : "Student")}
+                    </span>
+                    <span className="text-[10px] text-brand-800 font-semibold block truncate">
+                      লক্ষ্য: {currentProfile?.profile?.targetIntakeSeason ? `${currentProfile.profile.targetIntakeSeason} ${currentProfile.profile.targetIntakeYear || 2026}` : "ফল ২০২৬"}
+                    </span>
                   </div>
                 </div>
                 <div className="mt-2 pt-2 border-t border-brand-200/70 flex items-center justify-between text-[11px] text-slate-600">
                   <span>প্রোফাইল পূর্ণতা:</span>
-                  <span className="font-bold text-brand-800">৭৫%</span>
+                  <span className="font-bold text-brand-800">
+                    {currentProfile?.completion?.percentage ?? currentProfile?.profile?.completionPercentage ?? 25}%
+                  </span>
                 </div>
                 <div className="w-full bg-brand-200 h-1.5 rounded-full mt-1 overflow-hidden">
-                  <div className="bg-brand-600 h-full rounded-full" style={{ width: "75%" }} />
+                  <div
+                    className="bg-brand-600 h-full rounded-full"
+                    style={{ width: `${currentProfile?.completion?.percentage ?? currentProfile?.profile?.completionPercentage ?? 25}%` }}
+                  />
                 </div>
               </div>
 
@@ -315,9 +364,18 @@ export default function DashboardLayout({
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
-              <span>১০০% ফ্রি ও এজেন্সি-মুক্ত প্ল্যাটফর্ম</span>
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+              >
+                <LogOut className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{locale === "bn" ? "লগআউট" : "Logout"}</span>
+              </button>
+              <div className="text-[11px] text-slate-500 flex items-center gap-2 px-1">
+                <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
+                <span>১০০% ফ্রি ও এজেন্সি-মুক্ত প্ল্যাটফর্ম</span>
+              </div>
             </div>
           </div>
         </div>
@@ -351,23 +409,28 @@ export default function DashboardLayout({
           <div className="p-3.5 bg-gradient-to-br from-brand-50 to-brand-100/50 border border-brand-200 rounded-2xl shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-brand-700 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                সা
+                {(currentUser?.fullName?.trim() || "AM").slice(0, 2)}
               </div>
               <div className="overflow-hidden">
                 <span className="text-xs font-bold text-slate-900 block truncate">
-                  সাকিব আহমেদ
+                  {currentUser?.fullName || (locale === "bn" ? "শিক্ষার্থী" : "Student")}
                 </span>
                 <span className="text-[10px] text-brand-800 font-semibold block truncate">
-                  লক্ষ্য: ফল ২০২৬ (মাস্টার্স)
+                  লক্ষ্য: {currentProfile?.profile?.targetIntakeSeason ? `${currentProfile.profile.targetIntakeSeason} ${currentProfile.profile.targetIntakeYear || 2026}` : "ফল ২০২৬"}
                 </span>
               </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-brand-200/80 flex items-center justify-between text-[11px] text-slate-600">
               <span className="font-medium">প্রোফাইল পূর্ণতা:</span>
-              <span className="font-extrabold text-brand-800">৭৫%</span>
+              <span className="font-extrabold text-brand-800">
+                {currentProfile?.completion?.percentage ?? currentProfile?.profile?.completionPercentage ?? 25}%
+              </span>
             </div>
             <div className="w-full bg-brand-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
-              <div className="bg-brand-600 h-full rounded-full transition-all duration-500" style={{ width: "75%" }} />
+              <div
+                className="bg-brand-600 h-full rounded-full transition-all duration-500"
+                style={{ width: `${currentProfile?.completion?.percentage ?? currentProfile?.profile?.completionPercentage ?? 25}%` }}
+              />
             </div>
             <div className="mt-2.5 text-right">
               <Link
@@ -423,8 +486,15 @@ export default function DashboardLayout({
           </nav>
         </div>
 
-        {/* Free Promise Badge & Ethical Mission */}
-        <div className="pt-4 border-t border-slate-100 space-y-2 mt-4">
+        {/* Free Promise Badge & Logout */}
+        <div className="pt-3 border-t border-slate-100 space-y-2 mt-auto">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition-colors"
+          >
+            <LogOut className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{locale === "bn" ? "লগআউট" : "Logout"}</span>
+          </button>
           <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-start gap-2 text-[11px] text-slate-600">
             <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0 mt-0.5" />
             <div>

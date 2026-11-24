@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n-context";
 import { formatBdt } from "@abroadmate/shared";
@@ -32,6 +32,11 @@ import {
 export default function DashboardOverviewPage() {
   const { locale } = useI18n();
 
+  const [user, setUser] = useState<{ fullName: string; email: string } | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [dbScholarships, setDbScholarships] = useState<any[]>([]);
+  const [dbDeadlines, setDbDeadlines] = useState<any[]>([]);
+
   // Interactive milestone checklist
   const [milestones, setMilestones] = useState([
     { id: "ielts", text: "আইইএলটিএস বা সমমানের পরীক্ষায় কাঙ্ক্ষিত স্কোর অর্জন (লক্ষ্য: ৭.০+)", completed: false },
@@ -40,11 +45,46 @@ export default function DashboardOverviewPage() {
     { id: "sop", text: "স্টেটমেন্ট অব পারপাস (SOP) বা মোটিভেশন লেটারের খসড়া তৈরি", completed: true },
   ]);
 
+  useEffect(() => {
+    async function fetchLiveDashboard() {
+      try {
+        const [sessRes, profRes, scholRes, deadRes] = await Promise.allSettled([
+          fetch("/api/auth/session"),
+          fetch("/api/profile"),
+          fetch("/api/scholarships?limit=3"),
+          fetch("/api/deadlines"),
+        ]);
+
+        if (sessRes.status === "fulfilled") {
+          const json = await sessRes.value.json();
+          if (json.authenticated && json.user) setUser(json.user);
+        }
+        if (profRes.status === "fulfilled") {
+          const json = await profRes.value.json();
+          if (json.success && json.data) setProfileData(json.data);
+        }
+        if (scholRes.status === "fulfilled") {
+          const json = await scholRes.value.json();
+          if (json.success && Array.isArray(json.data)) setDbScholarships(json.data);
+        }
+        if (deadRes.status === "fulfilled") {
+          const json = await deadRes.value.json();
+          if (json.success && Array.isArray(json.data)) setDbDeadlines(json.data);
+        }
+      } catch (e) {
+        console.error("Dashboard data load error:", e);
+      }
+    }
+    fetchLiveDashboard();
+  }, []);
+
   const toggleMilestone = (id: string) => {
     setMilestones((prev) =>
       prev.map((m) => (m.id === id ? { ...m, completed: !m.completed } : m))
     );
   };
+
+  const completionPct = profileData?.completion?.percentage ?? profileData?.profile?.completionPercentage ?? 25;
 
   return (
     <div className="space-y-8">
@@ -57,11 +97,16 @@ export default function DashboardOverviewPage() {
               <span>এজেন্সি ও মধ্যস্বত্বভোগী ছাড়া সম্পূর্ণ স্বাবলম্বী প্রস্তুতি</span>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              স্বাগতম, সাকিব আহমেদ!
+              স্বাগতম, {user?.fullName || "শিক্ষার্থী"}!
             </h1>
             <p className="text-xs sm:text-sm text-brand-100 leading-relaxed font-normal">
-              আপনার লক্ষ্য: <strong>যুক্তরাজ্য ও কানাডায় ফল ২০২৬ সেশনে মাস্টার্স (কম্পিউটার সায়েন্স ও ডেটা সায়েন্স)</strong>। 
-              সঠিক সময়ে সঠিক পদক্ষেপ নিয়ে শতভাগ নির্ভেজালভাবে আপনার উচ্চশিক্ষার স্বপ্ন পূরণ করুন।
+              আপনার লক্ষ্য:{" "}
+              <strong>
+                {profileData?.profile?.targetIntakeSeason
+                  ? `${profileData?.profile?.targetIntakeSeason} ${profileData?.profile?.targetIntakeYear || 2026} সেশন`
+                  : "ফল ২০২৬ সেশনে উচ্চশিক্ষা"}
+              </strong>
+              । সঠিক সময়ে সঠিক পদক্ষেপ নিয়ে শতভাগ নির্ভেজালভাবে আপনার উচ্চশিক্ষার স্বপ্ন পূরণ করুন।
             </p>
           </div>
 
@@ -102,12 +147,12 @@ export default function DashboardOverviewPage() {
                 <p className="text-xs text-slate-500">নির্ভুল এআই ম্যাচিং ও স্কলারশিপ পাওয়ার জন্য প্রোফাইল ১০০% পূর্ণ করুন</p>
               </div>
             </div>
-            <span className="text-xl font-black text-brand-700">৭৫%</span>
+            <span className="text-xl font-black text-brand-700">{completionPct}%</span>
           </div>
 
           {/* Progress Bar */}
           <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-            <div className="bg-gradient-to-r from-brand-600 to-emerald-500 h-full rounded-full transition-all duration-700" style={{ width: "75%" }} />
+            <div className="bg-gradient-to-r from-brand-600 to-emerald-500 h-full rounded-full transition-all duration-700" style={{ width: `${completionPct}%` }} />
           </div>
 
           {/* Actionable Check items */}
