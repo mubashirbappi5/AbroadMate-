@@ -7,13 +7,12 @@ import {
   ShieldCheck,
   ArrowRight,
   CheckCircle2,
-  Sparkles,
   Calculator,
-  Compass,
 } from "lucide-react";
 
 export function HeroSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const isBn = locale === "bn";
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-brand-50/60 via-white to-slate-50 pt-12 pb-20 lg:pt-20 lg:pb-28">
@@ -24,7 +23,7 @@ export function HeroSection() {
         <div className="text-center max-w-3xl mx-auto space-y-6">
           {/* Trust Pill */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-900 text-xs sm:text-sm font-semibold shadow-xs">
-            <ShieldCheck className="w-4 h-4 text-brand-700" />
+            <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
             <span>{t.app.antiAgencyBadge}</span>
           </div>
 
@@ -61,15 +60,15 @@ export function HeroSection() {
           <div className="pt-8 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs sm:text-sm text-slate-600 font-medium">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
-              <span>ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও ইউএসএ</span>
+              <span>{isBn ? "ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও ইউএসএ" : "UK, Canada, Australia, Germany & USA"}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
-              <span>অফিসিয়াল ভিসা ও ব্যাংক সলভেন্সি নিয়মাবলী</span>
+              <span>{isBn ? "অফিসিয়াল ভিসা ও ব্যাংক সলভেন্সি নিয়মাবলী" : "Official Visa & Bank Solvency Rules"}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
-              <span>আইইএলটিএস ও জিপিএ অনুযায়ী অ্যাডমিশন চেকার</span>
+              <span>{isBn ? "আইইএলটিএস ও জিপিএ অনুযায়ী অ্যাডমিশন চেকার" : "Admission Eligibility by IELTS & GPA"}</span>
             </div>
           </div>
         </div>

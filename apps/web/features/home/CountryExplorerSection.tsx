@@ -7,7 +7,8 @@ import { Briefcase, Coins, ShieldAlert, ExternalLink, ArrowRight } from "lucide-
 import Link from "next/link";
 
 export function CountryExplorerSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const isBn = locale === "bn";
 
   return (
     <section className="py-16 bg-slate-50">
@@ -15,7 +16,7 @@ export function CountryExplorerSection() {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
           <div>
             <span className="text-xs font-bold text-brand-700 uppercase tracking-wider bg-brand-100/60 px-3 py-1 rounded-full border border-brand-200">
-              গ্লোবাল ডেস্টিনেশন
+              {t.countries.badge}
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
               {t.countries.title}
@@ -28,7 +29,7 @@ export function CountryExplorerSection() {
             href="/explore"
             className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-700 hover:text-brand-800"
           >
-            <span>সব দেশের তুলনা দেখুন</span>
+            <span>{t.countries.compareAll}</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -46,9 +47,9 @@ export function CountryExplorerSection() {
                     <span className="text-3xl">{country.flag}</span>
                     <div>
                       <h3 className="text-lg font-bold text-slate-900">
-                        {country.nameBn}
+                        {isBn ? country.nameBn : country.nameEn}
                       </h3>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 font-medium">
                         {country.nameEn} • {country.visaSubclass.name}
                       </span>
                     </div>
@@ -62,14 +63,15 @@ export function CountryExplorerSection() {
                     <Coins className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold text-slate-900 block">
-                        মাসিক জীবনযাত্রার ব্যয়:
+                        {isBn ? "মাসিক জীবনযাত্রার ব্যয়:" : "Monthly Living Expenses:"}
                       </span>
                       <span>
                         {country.currency.symbol}
-                        {country.avgMonthlyLivingCostLocal.toLocaleString()} {country.currency.code} (প্রায়{" "}
+                        {country.avgMonthlyLivingCostLocal.toLocaleString()} {country.currency.code} (
+                        {isBn ? "প্রায় " : "approx. "}
                         {formatBdt(
                           country.avgMonthlyLivingCostLocal * country.currency.rateToBdtApprox,
-                          "bn"
+                          isBn ? "bn" : "en"
                         )}
                         )
                       </span>
@@ -84,7 +86,9 @@ export function CountryExplorerSection() {
                         {t.countries.postStudyWork}:
                       </span>
                       <span className="line-clamp-2">
-                        {country.postStudyWorkMonths.descriptionBn}
+                        {isBn
+                          ? country.postStudyWorkMonths.descriptionBn
+                          : `Post-study work permit for ${country.postStudyWorkMonths.bachelor}-${country.postStudyWorkMonths.masters} months after graduation.`}
                       </span>
                     </div>
                   </div>
@@ -98,12 +102,16 @@ export function CountryExplorerSection() {
                     />
                     <div>
                       <span className="font-semibold text-slate-900 block">
-                        ব্লকড অ্যাকাউন্ট:
+                        {t.countries.blockedAccount}:
                       </span>
                       <span>
                         {country.blockedAccountRequired
-                          ? "জার্মানিতে ভিসা আবেদনের পূর্বে বাধ্যতামূলক (€১১,৯০৪ ইউরো)"
-                          : "প্রয়োজন নেই (নিয়মিত ব্যাংক স্টেটমেন্ট প্রদর্শন প্রযোজ্য)"}
+                          ? isBn
+                            ? "জার্মানিতে ভিসা আবেদনের পূর্বে বাধ্যতামূলক (€১১,৯০৪ ইউরো)"
+                            : "Mandatory prior to German student visa filing (€11,904)"
+                          : isBn
+                          ? "প্রয়োজন নেই (নিয়মিত ব্যাংক স্টেটমেন্ট প্রদর্শন প্রযোজ্য)"
+                          : "Not required (Standard bank solvency applies)"}
                       </span>
                     </div>
                   </div>
@@ -118,15 +126,15 @@ export function CountryExplorerSection() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800"
                 >
-                  <span>অফিসিয়াল পোর্টাল</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>{isBn ? "অফিসিয়াল সোর্স" : "Official Source"}</span>
+                  <ExternalLink className="w-3 h-3" />
                 </a>
 
                 <Link
                   href={`/explore?country=${country.code}`}
                   className="inline-flex items-center gap-1 text-brand-700 hover:text-brand-800 font-bold"
                 >
-                  <span>গাইড দেখুন</span>
+                  <span>{t.countries.viewDetails}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>

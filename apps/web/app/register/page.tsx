@@ -3,33 +3,32 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n-context";
 import {
   GraduationCap,
   ShieldCheck,
   Eye,
   EyeOff,
   ArrowRight,
-  CheckCircle2,
   Sparkles,
   Lock,
   Mail,
   User,
-  Phone,
-  Calendar,
-  Globe2,
   AlertCircle,
-  FileCheck2,
 } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const isBn = locale === "bn";
+
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
-    targetIntake: "Fall 2025 (আগস্ট/সেপ্টেম্বর ২০২৫)",
-    targetCountry: "UK",
+    targetIntake: "Fall 2026",
+    targetCountry: "GB",
     degreeLevel: "masters",
     password: "",
     confirmPassword: "",
@@ -56,22 +55,32 @@ export default function RegisterPage() {
     setErrorMessage("");
 
     if (!formData.fullName || !formData.email || !formData.phone || !formData.password) {
-      setErrorMessage("অনুগ্রহ করে সকল আবশ্যক তথ্য পূরণ করুন");
+      setErrorMessage(
+        isBn ? "অনুগ্রহ করে সকল আবশ্যক তথ্য পূরণ করুন" : "Please fill in all required fields"
+      );
       return;
     }
 
     if (formData.password.length < 8) {
-      setErrorMessage("পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে");
+      setErrorMessage(
+        isBn ? "পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে" : "Password must be at least 8 characters"
+      );
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setErrorMessage("দুইটি পাসওয়ার্ড মিলছে না");
+      setErrorMessage(
+        isBn ? "দুইটি পাসওয়ার্ড মিলছে না" : "The two passwords do not match"
+      );
       return;
     }
 
     if (!formData.agreedToTerms) {
-      setErrorMessage("অনুগ্রহ করে শর্তাবলী ও প্রাইভেসি পলিসিতে সম্মতি দিন");
+      setErrorMessage(
+        isBn
+          ? "অনুগ্রহ করে শর্তাবলী ও প্রাইভেসি পলিসিতে সম্মতি দিন"
+          : "Please agree to the Terms of Service and Privacy Policy"
+      );
       return;
     }
 
@@ -94,7 +103,12 @@ export default function RegisterPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setErrorMessage(data.error || "রেজিস্ট্রেশন সম্পন্ন করা সম্ভব হয়নি। আবার চেষ্টা করুন।");
+        setErrorMessage(
+          data.error ||
+            (isBn
+              ? "রেজিস্ট্রেশন সম্পন্ন করা সম্ভব হয়নি। আবার চেষ্টা করুন।"
+              : "Could not complete registration. Please try again.")
+        );
         setIsLoading(false);
         return;
       }
@@ -102,7 +116,11 @@ export default function RegisterPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setErrorMessage("সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+      setErrorMessage(
+        isBn
+          ? "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।"
+          : "Could not connect to the server. Please try again."
+      );
       setIsLoading(false);
     }
   };
@@ -120,7 +138,7 @@ export default function RegisterPage() {
               <div>
                 <span className="text-xl font-bold tracking-tight text-white">AbroadMate</span>
                 <span className="text-[10px] text-brand-300 block font-medium">
-                  বাংলাদেশি শিক্ষার্থীদের বিশ্বস্ত সঙ্গী
+                  {isBn ? "বাংলাদেশি শিক্ষার্থীদের বিশ্বস্ত সঙ্গী" : "Trusted Guide for Bangladeshi Students"}
                 </span>
               </div>
             </Link>
@@ -128,61 +146,79 @@ export default function RegisterPage() {
             <div className="pt-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-800/80 text-brand-200 text-xs font-semibold border border-brand-700/60 mb-3">
                 <Sparkles className="w-3.5 h-3.5 text-brand-300" />
-                <span>১০০% সম্পূর্ণ ফ্রি আজীবন এক্সেস</span>
+                <span>{isBn ? "১০০% সম্পূর্ণ ফ্রি আজীবন এক্সেস" : "100% Free Lifetime Access"}</span>
               </div>
               <h2 className="text-2xl font-black text-white leading-snug">
-                কোনো দালাল ছাড়াই উচ্চশিক্ষার যাত্রা শুরু করুন
+                {isBn ? "কোনো দালাল ছাড়াই উচ্চশিক্ষার যাত্রা শুরু করুন" : "Start Your Study Abroad Journey Directly"}
               </h2>
               <p className="mt-2 text-xs text-slate-300 leading-relaxed">
-                AbroadMate-এ অ্যাকাউন্ট খুললে আপনি যে অনন্য সুবিধাগুলো পাবেন:
+                {isBn
+                  ? "AbroadMate-এ অ্যাকাউন্ট খুললে আপনি যে অনন্য সুবিধাগুলো পাবেন:"
+                  : "Key benefits you unlock with your free AbroadMate account:"}
               </p>
             </div>
 
             <div className="space-y-3.5 pt-2 text-xs text-slate-200">
               <div className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-brand-700 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
-                  ১
+                  1
                 </div>
                 <div>
-                  <strong className="text-white block font-semibold">এআই ভর্তি যোগ্যতা ম্যাচিং</strong>
+                  <strong className="text-white block font-semibold">
+                    {isBn ? "এআই ভর্তি যোগ্যতা ম্যাচিং" : "AI Admission Eligibility Matching"}
+                  </strong>
                   <span className="text-slate-300 text-[11px]">
-                    আপনার এসএসসি, এইচএসসি ও ব্যাচেলর রেজাল্ট অনুযায়ী সঠিক বিশ্ববিদ্যালয় নির্বাচন
+                    {isBn
+                      ? "আপনার এসএসসি, এইচএসসি ও ব্যাচেলর রেজাল্ট অনুযায়ী সঠিক বিশ্ববিদ্যালয় নির্বাচন"
+                      : "Matched against verified minimum academic and IELTS score cutoffs"}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-brand-700 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
-                  ২
+                  2
                 </div>
                 <div>
-                  <strong className="text-white block font-semibold">ইউনিক এসওপি (SOP) বিল্ডার</strong>
+                  <strong className="text-white block font-semibold">
+                    {isBn ? "ইউনিক এসওপি (SOP) বিল্ডার" : "SOP & Motivation Letter Builder"}
+                  </strong>
                   <span className="text-slate-300 text-[11px]">
-                    ভিসা অফিসার ও ভর্তি কমিটির মন জয় করার মতো প্লাগিয়ারিজম-মুক্ত স্টেটমেন্ট অব পারপাস
+                    {isBn
+                      ? "ভিসা অফিসার ও ভর্তি কমিটির জন্য প্লাগিয়ারিজম-মুক্ত ড্রাফট প্রস্তুত করুন"
+                      : "Generate authentic, structured, plagiarism-free academic statements"}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-brand-700 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
-                  ৩
+                  3
                 </div>
                 <div>
-                  <strong className="text-white block font-semibold">টাকায় মোট খরচের হিসাব</strong>
+                  <strong className="text-white block font-semibold">
+                    {isBn ? "টাকায় মোট খরচের হিসাব" : "Realistic Expense Calculation (BDT)"}
+                  </strong>
                   <span className="text-slate-300 text-[11px]">
-                    টিউশন ফি, ভিসা ফি, স্বাস্থ্য বীমা ও মাসিক খরচের বাস্তবসম্মত বাজেট
+                    {isBn
+                      ? "টিউশন ফি, ভিসা ফি, স্বাস্থ্য বীমা ও মাসিক খরচের বাস্তবসম্মত বাজেট"
+                      : "Tuition, blocked account, visa fees, and realistic living cost estimates"}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-brand-700 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
-                  ৪
+                  4
                 </div>
                 <div>
-                  <strong className="text-white block font-semibold">ঢাকাস্থ দূতাবাস ও ভিসা গাইড</strong>
+                  <strong className="text-white block font-semibold">
+                    {isBn ? "ঢাকাস্থ দূতাবাস ও ভিসা গাইড" : "Dhaka Embassies & Visa Guidelines"}
+                  </strong>
                   <span className="text-slate-300 text-[11px]">
-                    অফিসিয়াল চেকলিস্ট ও ইন্টারভিউ প্রস্তুতির পূর্ণাঙ্গ গাইডলাইন
+                    {isBn
+                      ? "অফিসিয়াল চেকলিস্ট ও সঠিক ব্যাংক সলভেন্সি পদ্ধতির গাইডলাইন"
+                      : "Official document checklists, VFS centers, and bank solvency rules"}
                   </span>
                 </div>
               </div>
@@ -192,10 +228,12 @@ export default function RegisterPage() {
           <div className="pt-6 mt-6 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
             <div className="flex items-center gap-2 text-brand-300 font-semibold">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>আপনার গোপনীয়তা আমাদের সর্বোচ্চ অগ্রাধিকার</span>
+              <span>{isBn ? "আপনার গোপনীয়তা আমাদের সর্বোচ্চ অগ্রাধিকার" : "Your Privacy is Fully Protected"}</span>
             </div>
             <p className="text-[10px] text-slate-400">
-              আমরা আপনার ফোন নম্বর বা ইমেইল কোনো কোচিং সেন্টার বা বাণিজ্যিক কনসালটেন্সির কাছে বিক্রি করি না।
+              {isBn
+                ? "আমরা আপনার ফোন নম্বর বা ইমেইল কোনো কোচিং সেন্টার বা বাণিজ্যিক কনসালটেন্সির কাছে বিক্রি করি না।"
+                : "We never sell or share your contact info with coaching centres or commercial consultancies."}
             </p>
           </div>
         </div>
@@ -204,11 +242,13 @@ export default function RegisterPage() {
         <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
           <div className="max-w-lg w-full mx-auto">
             <div className="text-center sm:text-left mb-6">
-              <h1 className="text-2xl font-extrabold text-slate-900">ফ্রি স্টুডেন্ট একাউন্ট তৈরি করুন</h1>
+              <h1 className="text-2xl font-extrabold text-slate-900">
+                {isBn ? "ফ্রি স্টুডেন্ট একাউন্ট তৈরি করুন" : "Create Free Student Account"}
+              </h1>
               <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                ইতিমধ্যে একাউন্ট আছে?{" "}
+                {isBn ? "ইতিমধ্যে একাউন্ট আছে? " : "Already have an account? "}
                 <Link href="/login" className="font-bold text-brand-700 hover:text-brand-800 hover:underline">
-                  লগইন করুন
+                  {isBn ? "লগইন করুন" : "Log In"}
                 </Link>
               </p>
             </div>
@@ -224,7 +264,8 @@ export default function RegisterPage() {
               {/* Full Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  পুরো নাম (পাসপোর্ট / সার্টিফিকেট অনুযায়ী) <span className="text-rose-500">*</span>
+                  {isBn ? "পুরো নাম (পাসপোর্ট / সার্টিফিকেট অনুযায়ী)" : "Full Legal Name (as per Passport)"}{" "}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -233,7 +274,7 @@ export default function RegisterPage() {
                     required
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="যেমন: মোঃ সাকিব আল হাসান"
+                    placeholder={isBn ? "যেমন: মোঃ সাকিব আল হাসান" : "e.g. John Doe"}
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
                   />
                 </div>
@@ -243,7 +284,7 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ইমেইল ঠিকানা <span className="text-rose-500">*</span>
+                    {isBn ? "ইমেইল ঠিকানা" : "Email Address"} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -260,7 +301,7 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    মোবাইল নম্বর <span className="text-rose-500">*</span>
+                    {isBn ? "মোবাইল নম্বর" : "Phone Number"} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <div className="absolute left-3 flex items-center gap-1 text-xs font-bold text-slate-600 pointer-events-none">
@@ -283,36 +324,39 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    টার্গেট ইনটেক
+                    {isBn ? "টার্গেট ইনটেক" : "Target Intake"}
                   </label>
                   <select
                     value={formData.targetIntake}
                     onChange={(e) => setFormData({ ...formData, targetIntake: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
                   >
-                    <option value="Fall 2025 (আগস্ট/সেপ্টেম্বর ২০২৫)">Fall 2025 (আগস্ট/সেপ্টেম্বর ২০২৫)</option>
-                    <option value="Spring 2026 (জানুয়ারি/ফেব্রুয়ারি ২০২৬)">Spring 2026 (জানুয়ারি/ফেব্রুয়ারি ২০২৬)</option>
-                    <option value="Fall 2026 (আগস্ট/সেপ্টেম্বর ২০২৬)">Fall 2026 (আগস্ট/সেপ্টেম্বর ২০২৬)</option>
-                    <option value="Spring 2027">Spring 2027</option>
-                    <option value="Undecided">পরবর্তীতে ঠিক করব</option>
+                    <option value="Fall 2026">
+                      {isBn ? "Fall 2026 (আগস্ট/সেপ্টেম্বর ২০২৬)" : "Fall 2026 (August/September 2026)"}
+                    </option>
+                    <option value="Spring 2027">
+                      {isBn ? "Spring 2027 (জানুয়ারি/ফেব্রুয়ারি ২০২৭)" : "Spring 2027 (January/February 2027)"}
+                    </option>
+                    <option value="Fall 2027">Fall 2027</option>
+                    <option value="Undecided">{isBn ? "পরবর্তীতে ঠিক করব" : "Undecided"}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    পছন্দের দেশ
+                    {isBn ? "পছন্দের দেশ" : "Target Country"}
                   </label>
                   <select
                     value={formData.targetCountry}
                     onChange={(e) => setFormData({ ...formData, targetCountry: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
                   >
-                    <option value="GB">🇬🇧 যুক্তরাজ্য (UK)</option>
-                    <option value="CA">🇨🇦 কানাডা (Canada)</option>
-                    <option value="AU">🇦🇺 অস্ট্রেলিয়া (Australia)</option>
-                    <option value="DE">🇩🇪 জার্মানি (Germany)</option>
-                    <option value="US">🇺🇸 যুক্তরাষ্ট্র (USA)</option>
-                    <option value="ALL">এখনও সিদ্ধান্ত নিইনি</option>
+                    <option value="GB">🇬🇧 {isBn ? "যুক্তরাজ্য (UK)" : "United Kingdom"}</option>
+                    <option value="CA">🇨🇦 {isBn ? "কানাডা (Canada)" : "Canada"}</option>
+                    <option value="AU">🇦🇺 {isBn ? "অস্ট্রেলিয়া (Australia)" : "Australia"}</option>
+                    <option value="DE">🇩🇪 {isBn ? "জার্মানি (Germany)" : "Germany"}</option>
+                    <option value="US">🇺🇸 {isBn ? "যুক্তরাষ্ট্র (USA)" : "United States"}</option>
+                    <option value="ALL">{isBn ? "এখনও সিদ্ধান্ত নিইনি" : "Not sure yet"}</option>
                   </select>
                 </div>
               </div>
@@ -320,13 +364,13 @@ export default function RegisterPage() {
               {/* Degree Level */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  কোন ডিগ্রির জন্য আবেদন করবেন?
+                  {isBn ? "কোন ডিগ্রির জন্য আবেদন করবেন?" : "Degree Level"}
                 </label>
                 <div className="grid grid-cols-3 gap-2 text-xs font-medium">
                   {[
-                    { id: "bachelor", label: "ব্যাচেলর (স্নাতক)" },
-                    { id: "masters", label: "মাস্টার্স (স্নাতকোত্তর)" },
-                    { id: "phd", label: "পিএইচডি (গবেষণা)" },
+                    { id: "bachelor", labelBn: "ব্যাচেলর (স্নাতক)", labelEn: "Bachelor's" },
+                    { id: "masters", labelBn: "মাস্টার্স (স্নাতকোত্তর)", labelEn: "Master's" },
+                    { id: "phd", labelBn: "পিএইচডি (গবেষণা)", labelEn: "Ph.D. / Research" },
                   ].map((lvl) => (
                     <button
                       key={lvl.id}
@@ -338,7 +382,7 @@ export default function RegisterPage() {
                           : "border-slate-300 text-slate-600 hover:bg-slate-50"
                       }`}
                     >
-                      {lvl.label}
+                      {isBn ? lvl.labelBn : lvl.labelEn}
                     </button>
                   ))}
                 </div>
@@ -348,7 +392,7 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    পাসওয়ার্ড <span className="text-rose-500">*</span>
+                    {isBn ? "পাসওয়ার্ড" : "Password"} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -357,7 +401,7 @@ export default function RegisterPage() {
                       required
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="কমপক্ষে ৮ অক্ষর"
+                      placeholder={isBn ? "কমপক্ষে ৮ অক্ষর" : "Minimum 8 characters"}
                       className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
                     />
                     <button
@@ -372,7 +416,7 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    পাসওয়ার্ড নিশ্চিত করুন <span className="text-rose-500">*</span>
+                    {isBn ? "পাসওয়ার্ড নিশ্চিত করুন" : "Confirm Password"} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -381,7 +425,7 @@ export default function RegisterPage() {
                       required
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      placeholder="পুনরায় পাসওয়ার্ড দিন"
+                      placeholder={isBn ? "পুনরায় পাসওয়ার্ড দিন" : "Re-enter password"}
                       className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500 bg-slate-50/50"
                     />
                   </div>
@@ -406,8 +450,20 @@ export default function RegisterPage() {
                     ))}
                   </div>
                   <div className="text-[10px] text-slate-500 flex justify-between">
-                    <span>পাসওয়ার্ড শক্তি</span>
-                    <span>{strength < 2 ? "সহজ" : strength < 4 ? "মাঝারি" : "শক্তিশালী"}</span>
+                    <span>{isBn ? "পাসওয়ার্ড শক্তি" : "Password strength"}</span>
+                    <span>
+                      {strength < 2
+                        ? isBn
+                          ? "সহজ"
+                          : "Weak"
+                        : strength < 4
+                        ? isBn
+                          ? "মাঝারি"
+                          : "Moderate"
+                        : isBn
+                        ? "শক্তিশালী"
+                        : "Strong"}
+                    </span>
                   </div>
                 </div>
               )}
@@ -422,15 +478,31 @@ export default function RegisterPage() {
                     className="mt-0.5 rounded text-brand-600 focus:ring-brand-500"
                   />
                   <span className="text-xs text-slate-600 leading-relaxed">
-                    আমি AbroadMate-এর{" "}
-                    <Link href="/terms" target="_blank" className="text-brand-700 underline font-semibold">
-                      শর্তাবলী
-                    </Link>{" "}
-                    ও{" "}
-                    <Link href="/privacy" target="_blank" className="text-brand-700 underline font-semibold">
-                      প্রাইভেসি পলিসি
-                    </Link>{" "}
-                    মেনে নিচ্ছি এবং নিশ্চিত করছি যে আমি কোনো বাণিজ্যিক এজেন্সির কর্মী নই।
+                    {isBn ? (
+                      <>
+                        আমি AbroadMate-এর{" "}
+                        <Link href="/terms" target="_blank" className="text-brand-700 underline font-semibold">
+                          শর্তাবলী
+                        </Link>{" "}
+                        ও{" "}
+                        <Link href="/privacy" target="_blank" className="text-brand-700 underline font-semibold">
+                          প্রাইভেসি পলিসি
+                        </Link>{" "}
+                        মেনে নিচ্ছি এবং নিশ্চিত করছি যে আমি কোনো বাণিজ্যিক এজেন্সির কর্মী নই।
+                      </>
+                    ) : (
+                      <>
+                        I accept AbroadMate&apos;s{" "}
+                        <Link href="/terms" target="_blank" className="text-brand-700 underline font-semibold">
+                          Terms of Service
+                        </Link>{" "}
+                        and{" "}
+                        <Link href="/privacy" target="_blank" className="text-brand-700 underline font-semibold">
+                          Privacy Policy
+                        </Link>
+                        , and confirm that I am applying independently.
+                      </>
+                    )}
                   </span>
                 </label>
               </div>
@@ -441,7 +513,15 @@ export default function RegisterPage() {
                 disabled={isLoading}
                 className="w-full flex items-center justify-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold py-3.5 rounded-xl shadow-xs transition-colors text-sm disabled:opacity-50 mt-2"
               >
-                <span>{isLoading ? "একাউন্ট তৈরি করা হচ্ছে..." : "বিনামূল্যে অ্যাকাউন্ট তৈরি করুন"}</span>
+                <span>
+                  {isLoading
+                    ? isBn
+                      ? "একাউন্ট তৈরি করা হচ্ছে..."
+                      : "Creating account..."
+                    : isBn
+                    ? "বিনামূল্যে অ্যাকাউন্ট তৈরি করুন"
+                    : "Create Free Account"}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>

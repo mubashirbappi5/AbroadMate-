@@ -4,14 +4,14 @@ import React, { useState } from "react";
 import { useI18n } from "@/lib/i18n-context";
 import { calculateVisaFinancialProof } from "@abroadmate/visa-engine";
 import { COUNTRY_LIST, formatBdt } from "@abroadmate/shared";
-import { Calculator, Banknote, ShieldAlert, ArrowRight, Info } from "lucide-react";
-import Link from "next/link";
+import { Calculator, ShieldAlert, Info } from "lucide-react";
 
 export function CostCalculatorPreview() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const isBn = locale === "bn";
 
   const [countryCode, setCountryCode] = useState<"GB" | "CA" | "AU" | "DE" | "US">("GB");
-  const [tuitionInput, setTuitionInput] = useState<number>(15000);
+  const [tuitionInput, setTuitionInput] = useState<number>(16000);
 
   const currentCountry = COUNTRY_LIST.find((c) => c.code === countryCode);
   const breakdown = calculateVisaFinancialProof(countryCode, Number(tuitionInput) || 0);
@@ -24,7 +24,7 @@ export function CostCalculatorPreview() {
             {t.calculator.title}
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-            উচ্চশিক্ষায় আপনার মোট খরচের বাস্তব হিসাব
+            {t.calculator.heading}
           </h2>
           <p className="text-sm text-slate-600 mt-1">
             {t.calculator.subtitle}
@@ -36,13 +36,13 @@ export function CostCalculatorPreview() {
           <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-7 space-y-5">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Calculator className="w-5 h-5 text-brand-700" />
-              <span>তথ্য নির্বাচন করুন</span>
+              <span>{t.calculator.selectInfo}</span>
             </h3>
 
             {/* Country buttons */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-2">
-                গন্তব্য দেশ:
+                {t.calculator.targetCountry}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {COUNTRY_LIST.map((c) => (
@@ -51,8 +51,7 @@ export function CostCalculatorPreview() {
                     type="button"
                     onClick={() => {
                       setCountryCode(c.code as any);
-                      // Set a realistic default tuition
-                      if (c.code === "DE") setTuitionInput(500); // Public uni semester fees
+                      if (c.code === "DE") setTuitionInput(500);
                       else if (c.code === "GB") setTuitionInput(16000);
                       else if (c.code === "CA") setTuitionInput(22000);
                       else if (c.code === "AU") setTuitionInput(32000);
@@ -65,7 +64,7 @@ export function CostCalculatorPreview() {
                     }`}
                   >
                     <span>{c.flag}</span>
-                    <span className="truncate">{c.nameBn}</span>
+                    <span className="truncate">{isBn ? c.nameBn : c.nameEn}</span>
                   </button>
                 ))}
               </div>
@@ -74,7 +73,7 @@ export function CostCalculatorPreview() {
             {/* Tuition fee input */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                ১ম বর্ষের বার্ষিক আনুমানিক টিউশন ফি ({currentCountry?.currency.symbol}{" "}
+                {t.calculator.tuitionLabel} ({currentCountry?.currency.symbol}{" "}
                 {currentCountry?.currency.code})
               </label>
               <div className="relative">
@@ -89,7 +88,7 @@ export function CostCalculatorPreview() {
               </div>
               {countryCode === "DE" && (
                 <p className="text-[11px] text-brand-700 mt-1 font-medium">
-                  💡 জার্মানির অধিকাংশ পাবলিক বিশ্ববিদ্যালয়ে কোনো টিউশন ফি নেই, শুধুমাত্র প্রতি সেমিস্টারে €২৫০-€৩৫০ সেমিস্টার কন্ট্রিবিউশন দিতে হয়।
+                  {t.calculator.germanyTip}
                 </p>
               )}
             </div>
@@ -98,8 +97,9 @@ export function CostCalculatorPreview() {
             <div className="p-3 bg-brand-50/60 border border-brand-200 rounded-xl text-xs text-brand-900 flex items-start gap-2">
               <Info className="w-4 h-4 text-brand-700 shrink-0 mt-0.5" />
               <span>
-                ১ {currentCountry?.currency.code} = প্রায়{" "}
-                {currentCountry?.currency.rateToBdtApprox} বাংলাদেশি টাকা (BDT) হিসেবে হিসাব করা হয়েছে।
+                {isBn
+                  ? `১ ${currentCountry?.currency.code} = প্রায় ${currentCountry?.currency.rateToBdtApprox} বাংলাদেশি টাকা (BDT) হিসেবে হিসাব করা হয়েছে।`
+                  : `Calculated based on standard benchmark: 1 ${currentCountry?.currency.code} ≈ ${currentCountry?.currency.rateToBdtApprox} BDT.`}
               </span>
             </div>
           </div>
@@ -112,11 +112,11 @@ export function CostCalculatorPreview() {
                   {t.calculator.totalEstimate}
                 </span>
                 <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                  {formatBdt(breakdown.totalBdtApprox, "bn")}
+                  {formatBdt(breakdown.totalBdtApprox, isBn ? "bn" : "en")}
                 </span>
               </div>
               <div className="text-left sm:text-right text-xs text-brand-200">
-                <span>সমপরিমাণ স্থানীয় মুদ্রা:</span>
+                <span>{isBn ? "সমপরিমাণ স্থানীয় মুদ্রা:" : "Equivalent Local Currency:"}</span>
                 <span className="block text-base font-bold text-white">
                   {breakdown.currencyCode} {breakdown.totalLocal.toLocaleString()}
                 </span>
@@ -126,7 +126,9 @@ export function CostCalculatorPreview() {
             {/* Itemized Table */}
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">১ম বর্ষের টিউশন ফি:</span>
+                <span className="text-slate-600">
+                  {isBn ? "১ম বর্ষের টিউশন ফি:" : "1st Year Tuition Fee:"}
+                </span>
                 <span className="font-semibold text-slate-900">
                   {breakdown.currencyCode} {breakdown.tuitionFeeLocal.toLocaleString()}
                 </span>
@@ -134,21 +136,29 @@ export function CostCalculatorPreview() {
               <div className="flex justify-between py-2 border-b border-slate-100">
                 <span className="text-slate-600">
                   {countryCode === "DE"
-                    ? "বাধ্যতামূলক ব্লকড অ্যাকাউন্ট ডিপোজিট (১ বছর):"
-                    : "প্রয়োজনীয় জীবনযাত্রার ব্যয় (Living Cost):"}
+                    ? isBn
+                      ? "বাধ্যতামূলক ব্লকড অ্যাকাউন্ট ডিপোজিট (১ বছর):"
+                      : "Mandatory Blocked Account (1 Year):"
+                    : isBn
+                    ? "প্রয়োজনীয় জীবনযাত্রার ব্যয় (Living Cost):"
+                    : "Living Funds Required:"}
                 </span>
                 <span className="font-semibold text-slate-900">
                   {breakdown.currencyCode} {breakdown.livingFundsRequiredLocal.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">ভিসা আবেদন ও বায়োমেট্রিক ফি:</span>
+                <span className="text-slate-600">
+                  {isBn ? "ভিসা আবেদন ও বায়োমেট্রিক ফি:" : "Visa & Biometrics Fee:"}
+                </span>
                 <span className="font-semibold text-slate-900">
                   {breakdown.currencyCode} {breakdown.visaApplicationFeeLocal.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">বাধ্যতামূলক স্বাস্থ্য সুরক্ষা ও বীমা:</span>
+                <span className="text-slate-600">
+                  {isBn ? "বাধ্যতামূলক স্বাস্থ্য সুরক্ষা ও বীমা:" : "Health Insurance / Surcharge:"}
+                </span>
                 <span className="font-semibold text-slate-900">
                   {breakdown.currencyCode} {breakdown.healthInsuranceLocal.toLocaleString()}
                 </span>
@@ -159,11 +169,11 @@ export function CostCalculatorPreview() {
             <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 text-xs text-amber-950 space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-amber-900">
                 <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>অফিসিয়াল ব্যাংক ফান্ড নীতি:</span>
+                <span>{isBn ? "অফিসিয়াল ব্যাংক ফান্ড নীতি:" : "Official Bank Holding Rule:"}</span>
               </div>
               <p className="leading-relaxed">{breakdown.holdingRuleNoticeBn}</p>
               <p className="leading-relaxed font-medium">
-                👨‍👩‍👦 স্পনসর নির্দেশনা: {breakdown.sponsorGuidelineBn}
+                {isBn ? `👨‍👩‍👦 স্পনসর নির্দেশনা: ${breakdown.sponsorGuidelineBn}` : `👨‍👩‍👦 Sponsor Guideline: ${breakdown.sponsorGuidelineBn}`}
               </p>
             </div>
           </div>

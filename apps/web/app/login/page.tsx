@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n-context";
 import {
   GraduationCap,
   ShieldCheck,
   Eye,
   EyeOff,
   ArrowRight,
-  Sparkles,
   Lock,
   Mail,
   CheckCircle2,
@@ -19,6 +19,9 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const isBn = locale === "bn";
+
   const [authMode, setAuthMode] = useState<"password" | "magic-link">("password");
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -32,7 +35,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
     if (!email || !password) {
-      setErrorMessage("অনুগ্রহ করে ইমেইল ও পাসওয়ার্ড প্রদান করুন");
+      setErrorMessage(isBn ? "অনুগ্রহ করে ইমেইল ও পাসওয়ার্ড প্রদান করুন" : "Please provide email and password");
       return;
     }
     setIsLoading(true);
@@ -47,14 +50,23 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setErrorMessage(data.error || "ভুল ইমেইল অথবা পাসওয়ার্ড দেওয়া হয়েছে। আবার চেষ্টা করুন।");
+        setErrorMessage(
+          data.error ||
+            (isBn
+              ? "ভুল ইমেইল অথবা পাসওয়ার্ড দেওয়া হয়েছে। আবার চেষ্টা করুন।"
+              : "Invalid email or password. Please try again.")
+        );
         setIsLoading(false);
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setErrorMessage("সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+      setErrorMessage(
+        isBn
+          ? "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।"
+          : "Could not connect to the authentication server. Please try again."
+      );
       setIsLoading(false);
     }
   };
@@ -63,7 +75,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
     if (!email) {
-      setErrorMessage("অনুগ্রহ করে একটি বৈধ ইমেইল ঠিকানা দিন");
+      setErrorMessage(isBn ? "অনুগ্রহ করে একটি বৈধ ইমেইল ঠিকানা দিন" : "Please enter a valid email address");
       return;
     }
     setIsLoading(true);
@@ -86,7 +98,7 @@ export default function LoginPage() {
               <div>
                 <span className="text-xl font-bold tracking-tight text-white">AbroadMate</span>
                 <span className="text-[10px] text-brand-300 block font-medium">
-                  বাংলাদেশি শিক্ষার্থীদের বিশ্বস্ত সঙ্গী
+                  {isBn ? "বাংলাদেশি শিক্ষার্থীদের বিশ্বস্ত সঙ্গী" : "Trusted Partner for Bangladeshi Students"}
                 </span>
               </div>
             </Link>
@@ -94,36 +106,38 @@ export default function LoginPage() {
             <div className="pt-4">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-800/80 text-brand-200 text-xs font-semibold border border-brand-700/60 mb-3">
                 <ShieldCheck className="w-3.5 h-3.5 text-brand-300" />
-                <span>১০০% নিরাপদ ও দালালমুক্ত</span>
+                <span>{isBn ? "১০০% নিরাপদ ও দালালমুক্ত" : "100% Safe & Agency-Free"}</span>
               </div>
               <h2 className="text-2xl font-black text-white leading-snug">
-                আপনার স্টাডি অ্যাব্রড ড্যাশবোর্ডে প্রবেশ করুন
+                {isBn ? "আপনার স্টাডি অ্যাব্রড ড্যাশবোর্ডে প্রবেশ করুন" : "Access Your Study Abroad Dashboard"}
               </h2>
               <p className="mt-2.5 text-xs text-slate-300 leading-relaxed">
-                আপনার সেভ করা বিশ্ববিদ্যালয়, রোডম্যাপ ট্র্যাকার, এসওপি ড্রাফট এবং অ্যাপ্লিকেশন ডেডলাইন এক ক্লিকে পরিচালনা করুন।
+                {isBn
+                  ? "আপনার সেভ করা বিশ্ববিদ্যালয়, রোডম্যাপ ট্র্যাকার, এসওপি ড্রাফট এবং অ্যাপ্লিকেশন ডেডলাইন এক ক্লিকে পরিচালনা করুন।"
+                  : "Manage your shortlisted universities, roadmap tasks, SOP builder, and application deadlines in one place."}
               </p>
             </div>
 
             <div className="space-y-3 pt-2 text-xs text-slate-300">
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />
-                <span>আপনার কোনো তথ্য কোনো এজেন্সির সাথে শেয়ার করা হয় না</span>
+                <span>{isBn ? "আপনার কোনো তথ্য কোনো এজেন্সির সাথে শেয়ার করা হয় না" : "Your data is never shared with third-party agencies"}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />
-                <span>আজীবন ১০০% বিনামূল্যে এক্সেস গ্যারান্টি</span>
+                <span>{isBn ? "আজীবন ১০০% বিনামূল্যে এক্সেস গ্যারান্টি" : "100% free student access guaranteed forever"}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />
-                <span>২৫৬-বিট এনক্রিপ্টেড সুরক্ষিত ডেটাবেস</span>
+                <span>{isBn ? "২৫৬-বিট এনক্রিপ্টেড সুরক্ষিত ডেটাবেস" : "256-bit encrypted secure cloud database"}</span>
               </div>
             </div>
           </div>
 
           <div className="pt-8 mt-6 border-t border-slate-800 text-[11px] text-slate-400">
-            নিরাপত্তা বিষয়ে কোনো প্রশ্ন?{" "}
+            {isBn ? "নিরাপত্তা বিষয়ে কোনো প্রশ্ন? " : "Questions about security? "}
             <Link href="/privacy" className="text-brand-300 underline hover:text-white">
-              আমাদের প্রাইভেসি পলিসি পড়ুন
+              {isBn ? "আমাদের প্রাইভেসি পলিসি পড়ুন" : "Read our Privacy Policy"}
             </Link>
           </div>
         </div>
@@ -132,11 +146,11 @@ export default function LoginPage() {
         <div className="lg:col-span-7 p-8 sm:p-10 flex flex-col justify-center">
           <div className="max-w-md w-full mx-auto">
             <div className="text-center sm:text-left mb-6">
-              <h1 className="text-2xl font-extrabold text-slate-900">লগইন করুন</h1>
+              <h1 className="text-2xl font-extrabold text-slate-900">{isBn ? "লগইন করুন" : "Sign In"}</h1>
               <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                নতুন শিক্ষার্থী?{" "}
+                {isBn ? "নতুন শিক্ষার্থী? " : "New to AbroadMate? "}
                 <Link href="/register" className="font-bold text-brand-700 hover:text-brand-800 hover:underline">
-                  নতুন অ্যাকাউন্ট খুলুন (ফ্রি)
+                  {isBn ? "নতুন অ্যাকাউন্ট খুলুন (ফ্রি)" : "Create Free Account"}
                 </Link>
               </p>
             </div>
@@ -168,7 +182,7 @@ export default function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>গুগল দিয়ে সরাসরি প্রবেশ করুন</span>
+              <span>{isBn ? "গুগল দিয়ে সরাসরি প্রবেশ করুন" : "Continue with Google"}</span>
             </button>
 
             {/* Or Divider */}
@@ -178,7 +192,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider">
-                  অথবা ইমেইল ব্যবহার করুন
+                  {isBn ? "অথবা ইমেইল ব্যবহার করুন" : "Or use email"}
                 </span>
               </div>
             </div>
@@ -197,7 +211,7 @@ export default function LoginPage() {
                     : "hover:text-slate-900"
                 }`}
               >
-                পাসওয়ার্ড দিয়ে
+                {isBn ? "পাসওয়ার্ড দিয়ে" : "Password"}
               </button>
               <button
                 type="button"
@@ -211,7 +225,7 @@ export default function LoginPage() {
                     : "hover:text-slate-900"
                 }`}
               >
-                ম্যাজিক লিংক (পাসওয়ার্ড ছাড়া)
+                {isBn ? "ম্যাজিক লিংক (পাসওয়ার্ড ছাড়া)" : "Magic Link"}
               </button>
             </div>
 
@@ -226,7 +240,9 @@ export default function LoginPage() {
             {authMode === "password" && (
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">ইমেইল ঠিকানা</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {isBn ? "ইমেইল ঠিকানা" : "Email Address"}
+                  </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -242,15 +258,21 @@ export default function LoginPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">পাসওয়ার্ড</label>
+                    <label className="text-xs font-bold text-slate-700">
+                      {isBn ? "পাসওয়ার্ড" : "Password"}
+                    </label>
                     <button
                       type="button"
                       onClick={() =>
-                        alert("পাসওয়ার্ড রিসেটের লিংক আপনার ইমেইলে পাঠানোর ব্যবস্থা করা হচ্ছে।")
+                        alert(
+                          isBn
+                            ? "পাসওয়ার্ড রিসেটের লিংক আপনার ইমেইলে পাঠানোর ব্যবস্থা করা হচ্ছে।"
+                            : "Password reset link will be sent to your registered email address."
+                        )
                       }
                       className="text-[11px] text-brand-700 hover:text-brand-800 font-semibold"
                     >
-                      পাসওয়ার্ড ভুলে গেছেন?
+                      {isBn ? "পাসওয়ার্ড ভুলে গেছেন?" : "Forgot password?"}
                     </button>
                   </div>
                   <div className="relative">
@@ -281,7 +303,9 @@ export default function LoginPage() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="rounded text-brand-600 focus:ring-brand-500"
                     />
-                    <span className="text-xs text-slate-600">আমাকে মনে রাখুন</span>
+                    <span className="text-xs text-slate-600">
+                      {isBn ? "আমাকে মনে রাখুন" : "Remember me"}
+                    </span>
                   </label>
                 </div>
 
@@ -290,7 +314,15 @@ export default function LoginPage() {
                   disabled={isLoading}
                   className="w-full flex items-center justify-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl shadow-xs transition-colors text-sm disabled:opacity-50"
                 >
-                  <span>{isLoading ? "যাচাই করা হচ্ছে..." : "লগইন করুন"}</span>
+                  <span>
+                    {isLoading
+                      ? isBn
+                        ? "যাচাই করা হচ্ছে..."
+                        : "Signing in..."
+                      : isBn
+                      ? "লগইন করুন"
+                      : "Sign In"}
+                  </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
@@ -302,25 +334,33 @@ export default function LoginPage() {
                 {magicLinkSent ? (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-2.5">
                     <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-                    <h3 className="text-sm font-bold text-emerald-950">ম্যাজিক লিংক পাঠানো হয়েছে!</h3>
+                    <h3 className="text-sm font-bold text-emerald-950">
+                      {isBn ? "ম্যাজিক লিংক পাঠানো হয়েছে!" : "Magic link sent!"}
+                    </h3>
                     <p className="text-xs text-emerald-800 leading-relaxed">
-                      আমরা <strong>{email}</strong> ঠিকানায় একটি ওয়ান-ক্লিক লগইন লিংক পাঠিয়েছি। আপনার ইনবক্স চেক করে লিংকে ক্লিক করলেই লগইন হয়ে যাবে।
+                      {isBn
+                        ? `আমরা ${email} ঠিকানায় একটি ওয়ান-ক্লিক লগইন লিংক পাঠিয়েছি। আপনার ইনবক্স চেক করে লিংকে ক্লিক করলেই লগইন হয়ে যাবে।`
+                        : `We sent a secure one-click sign in link to ${email}. Check your inbox and click the link to enter.`}
                     </p>
                     <button
                       type="button"
                       onClick={() => setMagicLinkSent(false)}
                       className="mt-2 text-xs font-bold text-brand-700 underline"
                     >
-                      অন্য কোনো ইমেইল ব্যবহার করুন
+                      {isBn ? "অন্য কোনো ইমেইল ব্যবহার করুন" : "Use a different email address"}
                     </button>
                   </div>
                 ) : (
                   <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
                     <p className="text-xs text-slate-500">
-                      পাসওয়ার্ড মনে রাখার প্রয়োজন নেই। আপনার ইমেইল প্রদান করলে আমরা একটি তাত্ক্ষণিক সিকিউর লগইন লিংক পাঠাব।
+                      {isBn
+                        ? "পাসওয়ার্ড মনে রাখার প্রয়োজন নেই। আপনার ইমেইল প্রদান করলে আমরা একটি তাত্ক্ষণিক সিকিউর লগইন লিংক পাঠাব।"
+                        : "No need to remember passwords. Enter your email and we will send a secure instant sign in link."}
                     </p>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">ইমেইল ঠিকানা</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        {isBn ? "ইমেইল ঠিকানা" : "Email Address"}
+                      </label>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
@@ -339,7 +379,15 @@ export default function LoginPage() {
                       disabled={isLoading}
                       className="w-full flex items-center justify-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl shadow-xs transition-colors text-sm disabled:opacity-50"
                     >
-                      <span>{isLoading ? "পাঠানো হচ্ছে..." : "লগইন লিংক পাঠান"}</span>
+                      <span>
+                        {isLoading
+                          ? isBn
+                            ? "পাঠানো হচ্ছে..."
+                            : "Sending..."
+                          : isBn
+                          ? "লগইন লিংক পাঠান"
+                          : "Send Login Link"}
+                      </span>
                       <KeyRound className="w-4 h-4" />
                     </button>
                   </form>

@@ -28,6 +28,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { formatBdt, COUNTRY_LIST } from "@abroadmate/shared";
+import { useI18n } from "@/lib/i18n-context";
 
 interface UniversityItem {
   id: string;
@@ -258,6 +259,8 @@ const FALLBACK_UNIVERSITIES: UniversityItem[] = [
 ];
 
 export default function UniversitiesDiscoveryPage() {
+  const { locale } = useI18n();
+  const isBn = locale === "bn";
   const [activeTab, setActiveTab] = useState<"universities" | "programs" | "shortlist">("universities");
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -400,13 +403,21 @@ export default function UniversitiesDiscoveryPage() {
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-700/60 border border-brand-500/30 text-brand-200 text-xs font-semibold backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5 text-brand-300" />
-            <span>শতভাগ সরকারি রেজিস্ট্রেশন ও অফিসিয়াল অ্যাক্রিডিটেশন ভেরিফাইড</span>
+            <span>
+              {isBn
+                ? "শতভাগ সরকারি রেজিস্ট্রেশন ও অফিসিয়াল অ্যাক্রিডিটেশন ভেরিফাইড"
+                : "100% Government Registered & Officially Accredited"}
+            </span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-            বিশ্ববিদ্যালয় ও প্রোগ্রাম ডিসকভারি ডিরেক্টরি
+            {isBn
+              ? "বিশ্ববিদ্যালয় ও প্রোগ্রাম ডিসকভারি ডিরেক্টরি"
+              : "Universities & Programs Directory"}
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            কোনো এজেন্ট বা দালালের মিথ্যা আশ্বাস ছাড়া ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও যুক্তরাষ্ট্রের শীর্ষ বিশ্ববিদ্যালয়সমূহের অফিসিয়াল তথ্য, বাস্তব টিউশন ফি (টাকায় কনভার্টকৃত), এবং আইইএলটিএস যোগ্যতা যাচাই করুন।
+            {isBn
+              ? "কোনো এজেন্ট বা দালালের মিথ্যা আশ্বাস ছাড়া ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও যুক্তরাষ্ট্রের শীর্ষ বিশ্ববিদ্যালয়সমূহের অফিসিয়াল তথ্য, বাস্তব টিউশন ফি (টাকায় কনভার্টকৃত), এবং আইইএলটিএস যোগ্যতা যাচাই করুন।"
+              : "Explore verified official admissions criteria, realistic first-year tuition costs converted to BDT, and minimum IELTS cutoffs without agency intermediaries."}
           </p>
         </div>
       </div>
@@ -431,7 +442,9 @@ export default function UniversitiesDiscoveryPage() {
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>বিশ্ববিদ্যালয় ক্যাটালগ ({filteredUniversities.length})</span>
+            <span>
+              {isBn ? "বিশ্ববিদ্যালয় ক্যাটালগ" : "University Catalog"} ({filteredUniversities.length})
+            </span>
           </button>
 
           <button
@@ -443,7 +456,9 @@ export default function UniversitiesDiscoveryPage() {
             }`}
           >
             <GraduationCap className="w-4 h-4" />
-            <span>প্রোগ্রাম ডিরেক্টরি ({filteredPrograms.length})</span>
+            <span>
+              {isBn ? "প্রোগ্রাম ডিরেক্টরি" : "Program Directory"} ({filteredPrograms.length})
+            </span>
           </button>
 
           <button
@@ -455,7 +470,9 @@ export default function UniversitiesDiscoveryPage() {
             }`}
           >
             <BookmarkCheck className="w-4 h-4" />
-            <span>আমার শর্টলিস্ট ({favorites.length})</span>
+            <span>
+              {isBn ? "আমার শর্টলিস্ট" : "My Shortlist"} ({favorites.length})
+            </span>
           </button>
         </div>
 
@@ -476,7 +493,11 @@ export default function UniversitiesDiscoveryPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="বিশ্ববিদ্যালয়, শহর বা বিষয়ের নাম দিয়ে খুঁজুন (যেমন: Manchester, Toronto, AI)..."
+                placeholder={
+                  isBn
+                    ? "বিশ্ববিদ্যালয়, শহর বা বিষয়ের নাম দিয়ে খুঁজুন (যেমন: Manchester, Toronto, AI)..."
+                    : "Search by university name, city, or subject (e.g. Manchester, Toronto, AI)..."
+                }
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
               />
             </div>
@@ -490,7 +511,7 @@ export default function UniversitiesDiscoveryPage() {
                   onChange={(e) => setOnlyPublic(e.target.checked)}
                   className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
                 />
-                <span>শুধু সরকারি / পাবলিক প্রতিষ্ঠান</span>
+                <span>{isBn ? "শুধু সরকারি / পাবলিক প্রতিষ্ঠান" : "Public Institutions Only"}</span>
               </label>
             </div>
           </div>

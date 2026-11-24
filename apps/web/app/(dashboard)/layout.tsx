@@ -88,6 +88,8 @@ export default function DashboardLayout({
     router.refresh();
   };
 
+  const isBn = locale === "bn";
+
   const menuItems: MenuItem[] = [
     {
       href: "/dashboard",
@@ -101,7 +103,7 @@ export default function DashboardLayout({
       label: "একাডেমিক প্রোফাইল",
       labelEn: "My Profile",
       icon: UserCheck,
-      badge: "৭৫%",
+      badge: isBn ? "৭৫%" : "75%",
       badgeColor: "bg-brand-100 text-brand-800",
     },
     {
@@ -123,7 +125,7 @@ export default function DashboardLayout({
       label: "বিশ্ববিদ্যালয় ও প্রোগ্রাম",
       labelEn: "Universities & Programs",
       icon: School,
-      badge: "৩টি শর্টলিস্ট",
+      badge: isBn ? "৩টি শর্টলিস্ট" : "3 Shortlisted",
       badgeColor: "bg-amber-100 text-amber-800",
     },
     {
@@ -139,7 +141,7 @@ export default function DashboardLayout({
       label: "স্কলারশিপ ফাইন্ডার",
       labelEn: "Scholarship Finder",
       icon: GraduationCap,
-      badge: "ম্যাচিং",
+      badge: isBn ? "ম্যাচিং" : "Matches",
       badgeColor: "bg-emerald-100 text-emerald-800",
     },
     {
@@ -169,7 +171,7 @@ export default function DashboardLayout({
       label: "স্টাডি রোডম্যাপ",
       labelEn: "My Roadmap",
       icon: Compass,
-      badge: "পর্যায় ২",
+      badge: isBn ? "পর্যায় ২" : "Stage 2",
       badgeColor: "bg-blue-100 text-blue-800",
     },
     {
@@ -178,7 +180,7 @@ export default function DashboardLayout({
       label: "ডেডলাইন ও রিমাইন্ডার",
       labelEn: "Deadlines & Reminders",
       icon: CalendarClock,
-      badge: "৪টি আসন্ন",
+      badge: isBn ? "৪টি আসন্ন" : "4 Upcoming",
       badgeColor: "bg-rose-100 text-rose-800",
     },
     {
@@ -244,7 +246,9 @@ export default function DashboardLayout({
             </div>
             <div>
               <span className="font-extrabold text-sm text-slate-900 block leading-tight">AbroadMate</span>
-              <span className="text-[10px] text-brand-700 font-semibold block leading-tight">স্টুডেন্ট পোর্টাল</span>
+              <span className="text-[10px] text-brand-700 font-semibold block leading-tight">
+                {isBn ? "স্টুডেন্ট পোর্টাল" : "Student Portal"}
+              </span>
             </div>
           </Link>
         </div>
@@ -289,7 +293,9 @@ export default function DashboardLayout({
                   </div>
                   <div>
                     <span className="font-bold text-sm text-slate-900 block">AbroadMate</span>
-                    <span className="text-[10px] text-brand-700 font-semibold block">স্টুডেন্ট পোর্টাল</span>
+                    <span className="text-[10px] text-brand-700 font-semibold block">
+                      {isBn ? "স্টুডেন্ট পোর্টাল" : "Student Portal"}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -311,12 +317,17 @@ export default function DashboardLayout({
                       {currentUser?.fullName || (locale === "bn" ? "শিক্ষার্থী" : "Student")}
                     </span>
                     <span className="text-[10px] text-brand-800 font-semibold block truncate">
-                      লক্ষ্য: {currentProfile?.profile?.targetIntakeSeason ? `${currentProfile.profile.targetIntakeSeason} ${currentProfile.profile.targetIntakeYear || 2026}` : "ফল ২০২৬"}
+                      {isBn ? "লক্ষ্য: " : "Target: "}
+                      {currentProfile?.profile?.targetIntakeSeason
+                        ? `${currentProfile.profile.targetIntakeSeason} ${currentProfile.profile.targetIntakeYear || 2026}`
+                        : isBn
+                        ? "ফল ২০২৬"
+                        : "Fall 2026"}
                     </span>
                   </div>
                 </div>
                 <div className="mt-2 pt-2 border-t border-brand-200/70 flex items-center justify-between text-[11px] text-slate-600">
-                  <span>প্রোফাইল পূর্ণতা:</span>
+                  <span>{isBn ? "প্রোফাইল পূর্ণতা:" : "Profile Completion:"}</span>
                   <span className="font-bold text-brand-800">
                     {currentProfile?.completion?.percentage ?? currentProfile?.profile?.completionPercentage ?? 25}%
                   </span>
@@ -374,7 +385,7 @@ export default function DashboardLayout({
               </button>
               <div className="text-[11px] text-slate-500 flex items-center gap-2 px-1">
                 <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0" />
-                <span>১০০% ফ্রি ও এজেন্সি-মুক্ত প্ল্যাটফর্ম</span>
+                <span>{isBn ? "১০০% ফ্রি ও এজেন্সি-মুক্ত প্ল্যাটফর্ম" : "100% Free & Independent Platform"}</span>
               </div>
             </div>
           </div>
@@ -392,7 +403,9 @@ export default function DashboardLayout({
               </div>
               <div>
                 <span className="font-extrabold text-base text-slate-900 block leading-tight tracking-tight">AbroadMate</span>
-                <span className="text-[10px] text-brand-700 font-bold block leading-tight">স্টুডেন্ট ড্যাশবোর্ড</span>
+                <span className="text-[10px] text-brand-700 font-bold block leading-tight">
+                  {isBn ? "স্টুডেন্ট ড্যাশবোর্ড" : "Student Dashboard"}
+                </span>
               </div>
             </Link>
 
@@ -416,12 +429,17 @@ export default function DashboardLayout({
                   {currentUser?.fullName || (locale === "bn" ? "শিক্ষার্থী" : "Student")}
                 </span>
                 <span className="text-[10px] text-brand-800 font-semibold block truncate">
-                  লক্ষ্য: {currentProfile?.profile?.targetIntakeSeason ? `${currentProfile.profile.targetIntakeSeason} ${currentProfile.profile.targetIntakeYear || 2026}` : "ফল ২০২৬"}
+                  {isBn ? "লক্ষ্য: " : "Target: "}
+                  {currentProfile?.profile?.targetIntakeSeason
+                    ? `${currentProfile.profile.targetIntakeSeason} ${currentProfile.profile.targetIntakeYear || 2026}`
+                    : isBn
+                    ? "ফল ২০২৬"
+                    : "Fall 2026"}
                 </span>
               </div>
             </div>
             <div className="mt-3 pt-2.5 border-t border-brand-200/80 flex items-center justify-between text-[11px] text-slate-600">
-              <span className="font-medium">প্রোফাইল পূর্ণতা:</span>
+              <span className="font-medium">{isBn ? "প্রোফাইল পূর্ণতা:" : "Profile Completion:"}</span>
               <span className="font-extrabold text-brand-800">
                 {currentProfile?.completion?.percentage ?? currentProfile?.profile?.completionPercentage ?? 25}%
               </span>
@@ -437,7 +455,7 @@ export default function DashboardLayout({
                 href="/dashboard/profile"
                 className="text-[10px] font-bold text-brand-700 hover:text-brand-800 inline-flex items-center gap-0.5 hover:underline"
               >
-                <span>বাকি তথ্য পূরণ করুন</span>
+                <span>{isBn ? "বাকি তথ্য পূরণ করুন" : "Complete Remaining Steps"}</span>
                 <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
@@ -498,9 +516,13 @@ export default function DashboardLayout({
           <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-start gap-2 text-[11px] text-slate-600">
             <ShieldCheck className="w-4 h-4 text-brand-700 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-slate-800 block">১০০% সম্পূর্ণ ফ্রি পোর্টাল</span>
+              <span className="font-bold text-slate-800 block">
+                {isBn ? "১০০% সম্পূর্ণ ফ্রি পোর্টাল" : "100% Free & Independent Portal"}
+              </span>
               <span className="text-[10px] text-slate-500 leading-tight block mt-0.5">
-                কোনো এজেন্সি মধ্যস্বত্বভোগী নয়, সরাসরি অফিসিয়াল নির্দেশিকা।
+                {isBn
+                  ? "কোনো এজেন্সি মধ্যস্বত্বভোগী নয়, সরাসরি অফিসিয়াল নির্দেশিকা।"
+                  : "Direct official guidelines without commercial agency intermediaries."}
               </span>
             </div>
           </div>

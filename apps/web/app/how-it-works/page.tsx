@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n-context";
 import {
   UserCheck,
   Search,
@@ -12,144 +13,182 @@ import {
   XCircle,
   ArrowRight,
   Sparkles,
-  HelpCircle,
   Award,
   Globe2,
   Building,
-  GraduationCap,
-  Clock,
-  DollarSign,
   ChevronRight,
-  BookOpen,
 } from "lucide-react";
 
 export default function HowItWorksPage() {
+  const { locale } = useI18n();
+  const isBn = locale === "bn";
+
   const [activeStep, setActiveStep] = useState(1);
 
   const steps = [
     {
       id: 1,
-      number: "০১",
-      title: "প্রোফাইল তৈরি ও প্রস্তুতি",
-      subtitle: "Profile & Academic Readiness",
-      shortDesc: "আপনার পূর্ববর্তী রেজাল্ট ও টার্গেটের ভিত্তিতে বাস্তবসম্মত রোডম্যাপ নির্ধারণ করুন।",
+      number: isBn ? "০১" : "01",
+      title: isBn ? "প্রোফাইল তৈরি ও প্রস্তুতি" : "Profile & Readiness",
+      subtitle: isBn ? "Profile & Academic Readiness" : "Assess Eligibility & Standardized Requirements",
+      shortDesc: isBn
+        ? "আপনার পূর্ববর্তী রেজাল্ট ও টার্গেটের ভিত্তিতে বাস্তবসম্মত রোডম্যাপ নির্ধারণ করুন।"
+        : "Evaluate your academic GPA and language scores against international entry thresholds.",
       icon: UserCheck,
       details: [
         {
-          heading: "শিক্ষাগত যোগ্যতার সঠিক মূল্যায়ন",
-          text: "আপনার এসএসসি, এইচএসসি অথবা স্নাতক (অনার্স) সিজিপিএ আন্তর্জাতিক গ্রেডিং স্কেলে (যেমন ৪.০ বা ইউকে ২:১ সমমান) স্বয়ংক্রিয়ভাবে রূপান্তর করে যাচাই করুন।",
+          heading: isBn ? "শিক্ষাগত যোগ্যতার সঠিক মূল্যায়ন" : "Accurate Academic Evaluation",
+          text: isBn
+            ? "আপনার এসএসসি, এইচএসসি অথবা স্নাতক (অনার্স) সিজিপিএ আন্তর্জাতিক গ্রেডিং স্কেলে স্বয়ংক্রিয়ভাবে রূপান্তর করে যাচাই করুন।"
+            : "Convert and compare your SSC, HSC, or Bachelor CGPA against international equivalencies (such as UK 2:1 or US 4.0).",
         },
         {
-          heading: "ভাষা দক্ষতার লক্ষ্যমাত্রা (IELTS/PTE)",
-          text: "পছন্দের দেশের ভিসার ন্যূনতম ব্যান্ড স্কোর (যেমন ইউকে/কানাডা/অস্ট্রেলিয়াতে ন্যূনতম ৬.০ বা ৬.৫) এবং কোনো ব্যান্ড যাতে ৫.৫ এর নিচে না থাকে তা নিশ্চিত করুন।",
+          heading: isBn ? "ভাষা দক্ষতার লক্ষ্যমাত্রা (IELTS/PTE)" : "Language Target (IELTS/PTE)",
+          text: isBn
+            ? "পছন্দের দেশের ভিসার ন্যূনতম ব্যান্ড স্কোর (যেমন ইউকে/কানাডা/অস্ট্রেলিয়াতে ন্যূনতম ৬.০ বা ৬.৫) এবং কোনো ব্যান্ড যাতে ৫.৫ এর নিচে না থাকে তা নিশ্চিত করুন।"
+            : "Confirm your target country's minimum language criteria (typically 6.0 - 6.5 overall with no sub-band below 5.5 - 6.0).",
         },
         {
-          heading: "পারিবারিক বাজেট ও ইনটেক প্ল্যানিং",
-          text: "ফল (Fall - সেপ্টেম্বর/অক্টোবর) নাকি স্প্রিং (Spring - জানুয়ারি/ফেব্রুয়ারি) ইনটেকে যাবেন এবং টিউশন ফি ও লিভিং কস্টের জন্য প্রয়োজনীয় ফান্ডিং প্ল্যান ঠিক করুন।",
+          heading: isBn ? "পারিবারিক বাজেট ও ইনটেক প্ল্যানিং" : "Budget & Intake Planning",
+          text: isBn
+            ? "ফল নাকি স্প্রিং ইনটেকে যাবেন এবং টিউশন ফি ও লিভিং কস্টের জন্য প্রয়োজনীয় ফান্ডিং প্ল্যান ঠিক করুন।"
+            : "Determine your preferred intake (Fall vs Spring) and establish an upfront budget for tuition and living funds.",
         },
       ],
-      deliverables: ["জিপিএ রূপান্তর রিপোর্ট", "টার্গেট ইনটেক ক্যালেন্ডার", "ভাষা পরীক্ষার চেকলিস্ট"],
+      deliverables: isBn
+        ? ["জিপিএ রূপান্তর রিপোর্ট", "টার্গেট ইনটেক ক্যালেন্ডার", "ভাষা পরীক্ষার চেকলিস্ট"]
+        : ["GPA Conversion Report", "Target Intake Calendar", "Language Exam Checklist"],
     },
     {
       id: 2,
-      number: "০২",
-      title: "এক্সপ্লোর ও বিশ্ববিদ্যালয় ম্যাচিং",
-      subtitle: "Explore & University Matching",
-      shortDesc: "ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও ইউএসএ-র স্বীকৃত প্রতিষ্ঠান থেকে আপনার জন্য সেরাটি বেছে নিন।",
+      number: isBn ? "০২" : "02",
+      title: isBn ? "এক্সপ্লোর ও বিশ্ববিদ্যালয় ম্যাচিং" : "University & Program Matching",
+      subtitle: isBn ? "Explore & University Matching" : "Discover Ranked Institutions & Scholarships",
+      shortDesc: isBn
+        ? "ইউকে, কানাডা, অস্ট্রেলিয়া, জার্মানি ও ইউএসএ-র স্বীকৃত প্রতিষ্ঠান থেকে আপনার জন্য সেরাটি বেছে নিন।"
+        : "Shortlist accredited, government-recognized universities and eligible scholarship programs.",
       icon: Search,
       details: [
         {
-          heading: "ভেরিফাইড বিশ্ববিদ্যালয় ক্যাটালগ",
-          text: "শুধুমাত্র সরকারি অনুমোদিত এবং বিশ্ব র‍্যাঙ্কিংয়ে থাকা বিশ্ববিদ্যালয়গুলো ব্রাউজ করুন। কোনো ভুয়া বা অকার্যকর বেসরকারি কলেজ নয়।",
+          heading: isBn ? "ভেরিফাইড বিশ্ববিদ্যালয় ক্যাটালগ" : "Verified Institution Directory",
+          text: isBn
+            ? "শুধুমাত্র সরকারি অনুমোদিত এবং বিশ্ব র‍্যাঙ্কিংয়ে থাকা বিশ্ববিদ্যালয়গুলো ব্রাউজ করুন। কোনো ভুয়া বা অকার্যকর বেসরকারি কলেজ নয়।"
+            : "Browse strictly recognized and accredited public universities with verified international student credentials.",
         },
         {
-          heading: "টিউশন ফি ও স্কলারশিপ যোগ্যতা",
-          text: "জার্মানির টিউশন-ফ্রি পাবলিক বিশ্ববিদ্যালয় কিংবা ইউকে ও কানাডার স্কলারশিপ সুযোগ (যেমন শেভেনিং, ডিএএডি, অস্ট্রেলিয়া অ্যাওয়ার্ডস) ফিল্টার করে দেখুন।",
+          heading: isBn ? "টিউশন ফি ও স্কলারশিপ যোগ্যতা" : "Tuition & Scholarship Screening",
+          text: isBn
+            ? "জার্মানির টিউশন-ফ্রি পাবলিক বিশ্ববিদ্যালয় কিংবা ইউকে ও কানাডার স্কলারশিপ সুযোগ (যেমন শেভেনিং, ডিএএডি, অস্ট্রেলিয়া অ্যাওয়ার্ডস) ফিল্টার করে দেখুন।"
+            : "Filter tuition-free options (German public universities) alongside major scholarships like Chevening, DAAD, and AAS.",
         },
         {
-          heading: "পোস্ট-স্টাডি ওয়ার্ক পারমিট (PSW)",
-          text: "পড়াশোনা শেষে কোন দেশে কত বছর কাজের ভিসা (যেমন ইউকে ২ বছর, কানাডা ৩ বছর, জার্মানি ১৮ মাস) পাওয়া যাবে তা শুরুতেই জেনে নিন।",
+          heading: isBn ? "পোস্ট-স্টাডি ওয়ার্ক পারমিট (PSW)" : "Post-Study Work Rights (PSW)",
+          text: isBn
+            ? "পড়াশোনা শেষে কোন দেশে কত বছর কাজের ভিসা (যেমন ইউকে ২ বছর, কানাডা ৩ বছর, জার্মানি ১৮ মাস) পাওয়া যাবে তা শুরুতেই জেনে নিন।"
+            : "Review post-graduation work rights (UK 2 years, Canada up to 3 years, Germany 18 months) prior to committing.",
         },
       ],
-      deliverables: ["৫টি পছন্দের বিশ্ববিদ্যালয়ের তালিকা", "স্কলারশিপ ডেডলাইন ট্র্যাকার", "এন্ট্রি রিকোয়ারমেন্টস শিট"],
+      deliverables: isBn
+        ? ["৫টি পছন্দের বিশ্ববিদ্যালয়ের তালিকা", "স্কলারশিপ ডেডলাইন ট্র্যাকার", "এন্ট্রি রিকোয়ারমেন্টস শিট"]
+        : ["Shortlist of 5 Universities", "Scholarship Deadline Tracker", "Entry Requirements Sheet"],
     },
     {
       id: 3,
-      number: "০৩",
-      title: "ডকুমেন্টেশন ও সরাসরি আবেদন",
-      subtitle: "Documentation & Direct Apply",
-      shortDesc: "বিশ্ববিদ্যালয়ের নিজস্ব অফিশিয়াল ওয়েবসাইটে নিজে নিজেই নির্ভুল আবেদন সম্পন্ন করুন।",
+      number: isBn ? "০৩" : "03",
+      title: isBn ? "ডকুমেন্টেশন ও সরাসরি আবেদন" : "Documentation & Direct Application",
+      subtitle: isBn ? "Documentation & Direct Apply" : "Draft SOP & Submit Without Intermediaries",
+      shortDesc: isBn
+        ? "বিশ্ববিদ্যালয়ের নিজস্ব অফিশিয়াল ওয়েবসাইটে নিজে নিজেই নির্ভুল আবেদন সম্পন্ন করুন।"
+        : "Prepare compelling, authentic academic documents and submit directly through official admissions portals.",
       icon: FileText,
       details: [
         {
-          heading: "প্রফেশনাল এসওপি (SOP) ও মোটিভেশন লেটার",
-          text: "আমাদের এআই নির্দেশিকা ব্যবহার করে সম্পূর্ণ প্লাগিয়ারিজম-মুক্ত এবং আপনার নিজস্ব বাস্তব গল্পনির্ভর আকর্ষণীয় স্টেটমেন্ট অব পারপাস তৈরি করুন।",
+          heading: isBn ? "প্রফেশনাল এসওপি (SOP) ও মোটিভেশন লেটার" : "Structured SOP & Motivation Letters",
+          text: isBn
+            ? "আমাদের এআই নির্দেশিকা ব্যবহার করে সম্পূর্ণ প্লাগিয়ারিজম-মুক্ত এবং আপনার নিজস্ব বাস্তব গল্পনির্ভর আকর্ষণীয় স্টেটমেন্ট অব পারপাস তৈরি করুন।"
+            : "Use our domain-tailored AI assistant to draft compelling, plagiarism-free Statements of Purpose based on your genuine background.",
         },
         {
-          heading: "সুপারিশপত্র (LOR) ও একাডেমিক সনদ",
-          text: "কলেজ বা বিশ্ববিদ্যালয়ের শিক্ষকদের কাছ থেকে একাডেমিক রিকমেন্ডেশন লেটার এবং শিক্ষাবোর্ড থেকে ট্রান্সক্রিপ্ট সত্যায়নের নিয়মাবলী অনুসরণ করুন।",
+          heading: isBn ? "সুপারিশপত্র (LOR) ও একাডেমিক সনদ" : "Letters of Recommendation & Transcripts",
+          text: isBn
+            ? "কলেজ বা বিশ্ববিদ্যালয়ের শিক্ষকদের কাছ থেকে একাডেমিক রিকমেন্ডেশন লেটার এবং শিক্ষাবোর্ড থেকে ট্রান্সক্রিপ্ট সত্যায়নের নিয়মাবলী অনুসরণ করুন।"
+            : "Obtain academic recommendation letters and follow board/university attestation protocols.",
         },
         {
-          heading: "সরাসরি আবেদন—কোনো মধ্যস্বত্বভোগী ছাড়া",
-          text: "বিশ্ববিদ্যালয়ের নিজস্ব অ্যাপলিকেশন পোর্টালে নিজেই অ্যাকাউন্ট খুলে আবেদন ফি পরিশোধ করুন। আপনার পোর্টালের লগইন অ্যাক্সেস থাকবে শতভাগ আপনার নিজের হাতে।",
+          heading: isBn ? "সরাসরি আবেদন—কোনো মধ্যস্বত্বভোগী ছাড়া" : "Direct Portal Submission",
+          text: isBn
+            ? "বিশ্ববিদ্যালয়ের নিজস্ব অ্যাপলিকেশন পোর্টালে নিজেই অ্যাকাউন্ট খুলে আবেদন ফি পরিশোধ করুন। আপনার পোর্টালের লগইন অ্যাক্সেস থাকবে শতভাগ আপনার নিজের হাতে।"
+            : "Create your personal account on the university application portal and track your file with 100% direct transparency.",
         },
       ],
-      deliverables: ["স্ট্যান্ডার্ড এসওপি ড্রাফট", "ডকুমেন্ট ভেরিফিকেশন চেকলিস্ট", "অফিশিয়াল অ্যাপ্লিকেশন আইডি"],
+      deliverables: isBn
+        ? ["স্ট্যান্ডার্ড এসওপি ড্রাফট", "ডকুমেন্ট ভেরিফিকেশন চেকলিস্ট", "অফিশিয়াল অ্যাপ্লিকেশন আইডি"]
+        : ["Standard SOP Draft", "Document Verification Checklist", "Official Application ID"],
     },
     {
       id: 4,
-      number: "০৪",
-      title: "ভিসা ও স্বপ্নের দেশান্তর",
-      subtitle: "Visa Approval & Pre-departure",
-      shortDesc: "অফার লেটার প্রাপ্তির পর ঢাকায় অফিশিয়াল দূতাবাসে ভিসা আবেদন এবং ফ্লাইটের চূড়ান্ত প্রস্তুতি।",
+      number: isBn ? "০৪" : "04",
+      title: isBn ? "ভিসা ও স্বপ্নের দেশান্তর" : "Visa Approval & Departure",
+      subtitle: isBn ? "Visa Approval & Pre-departure" : "Financial Solvency & Official Embassy Submission",
+      shortDesc: isBn
+        ? "অফার লেটার প্রাপ্তির পর ঢাকায় অফিশিয়াল দূতাবাসে ভিসা আবেদন এবং ফ্লাইটের চূড়ান্ত প্রস্তুতি।"
+        : "Finalize financial proof, schedule biometrics in Dhaka, and prepare for your departure.",
       icon: PlaneTakeoff,
       details: [
         {
-          heading: "অফার লেটার ও কনফার্মেশন ডকুমেন্ট",
-          text: "বিশ্ববিদ্যালয় থেকে অফার লেটার পাওয়ার পর ইউকের জন্য CAS, ইউএসএর জন্য I-20, অস্ট্রেলিয়ার জন্য CoE বা কানাডার লেটার অব অ্যাক্সেপ্টেন্স (LOA) নিশ্চিত করুন।",
+          heading: isBn ? "অফার লেটার ও কনফার্মেশন ডকুমেন্ট" : "Offer Letter & Confirmation (CAS/I-20/LOA)",
+          text: isBn
+            ? "বিশ্ববিদ্যালয় থেকে অফার লেটার পাওয়ার পর ইউকের জন্য CAS, ইউএসএর জন্য I-20, অস্ট্রেলিয়ার জন্য CoE বা কানাডার লেটার অব অ্যাক্সেপ্টেন্স (LOA) নিশ্চিত করুন।"
+            : "Secure your official acceptance confirmation (CAS for UK, I-20 for USA, CoE for Australia, LOA for Canada).",
         },
         {
-          heading: "আর্থিক সক্ষমতার প্রমাণ (Financial Proof)",
-          text: "বাংলাদেশি ব্যাংকে স্পন্সরের বৈধ ফান্ডিং হিস্ট্রি অথবা জার্মানির ক্ষেত্রে Expatrio/Fintiba-র মাধ্যমে সরকারি নিয়মে ব্লকড অ্যাকাউন্ট ফান্ড ট্রান্সফার সম্পন্ন করুন।",
+          heading: isBn ? "আর্থিক সক্ষমতার প্রমাণ (Financial Proof)" : "Proof of Financial Capacity",
+          text: isBn
+            ? "বাংলাদেশি ব্যাংকে স্পন্সরের বৈধ ফান্ডিং হিস্ট্রি অথবা জার্মানির ক্ষেত্রে Expatrio/Fintiba-র মাধ্যমে সরকারি নিয়মে ব্লকড অ্যাকাউন্ট ফান্ড ট্রান্সফার সম্পন্ন করুন।"
+            : "Complete the 28-day holding period in Bangladeshi banks or open a verified German Blocked Account via official partners.",
         },
         {
-          heading: "ঢাকায় ভিসা ফাইল সাবমিশন ও ভিএফএস বায়োমেট্রিক",
-          text: "বারিধারা বা গুলশানের অফিশিয়াল দূতাবাস অথবা ভিএফএস গ্লোবাল (VFS Global)/টিএলএসকন্টাক্ট (TLScontact) সেন্টারে সরাসরি গিয়ে বায়োমেট্রিক ও সাক্ষাৎকার সম্পন্ন করুন।",
+          heading: isBn ? "ঢাকায় ভিসা ফাইল সাবমিশন ও ভিএফএস বায়োমেট্রিক" : "Dhaka Visa Submission & Biometrics",
+          text: isBn
+            ? "বারিধারা বা গুলশানের অফিশিয়াল দূতাবাস অথবা ভিএফএস গ্লোবাল (VFS Global)/টিএলএসকন্টাক্ট সেন্টারে সরাসরি গিয়ে বায়োমেট্রিক ও সাক্ষাৎকার সম্পন্ন করুন।"
+            : "Attend your biometric appointment and visa interview directly at VFS Global or diplomatic missions in Baridhara/Gulshan.",
         },
       ],
-      deliverables: ["ভিসা ইন্টারভিউ প্রশ্নোত্তর গাইড", "ব্যাংক ব্যালেন্স স্টেটমেন্ট ফরম্যাট", "প্রাক-যাত্রা ও বিমান টিকিট চেকলিস্ট"],
+      deliverables: isBn
+        ? ["ভিসা ইন্টারভিউ প্রশ্নোত্তর গাইড", "ব্যাংক ব্যালেন্স স্টেটমেন্ট ফরম্যাট", "প্রাক-যাত্রা ও বিমান টিকিট চেকলিস্ট"]
+        : ["Visa Interview Q&A Guide", "Bank Solvency Format", "Pre-Departure Checklist"],
     },
   ];
 
   const comparisonPoints = [
     {
-      parameter: "সার্ভিস ফি / ফাইল ওপেনিং চার্জ",
-      agency: "৫০,০০০ থেকে ২,৫০,০০০+ টাকা অযৌক্তিক ফি",
-      abroadmate: "১০০% সম্পূর্ণ ফ্রি (০ টাকা)",
+      parameter: isBn ? "সার্ভিস ফি / ফাইল ওপেনিং চার্জ" : "Service & File Opening Fees",
+      agency: isBn ? "৫০,০০০ থেকে ২,৫০,০০০+ টাকা অযৌক্তিক ফি" : "BDT 50,000 - 250,000+ extracted",
+      abroadmate: isBn ? "১০০% সম্পূর্ণ ফ্রি (০ টাকা)" : "100% Free Forever (0 BDT)",
       agencyBad: true,
     },
     {
-      parameter: "বিশ্ববিদ্যালয় নির্বাচন",
-      agency: "যেসব বেসরকারি কলেজ তাদের বেশি কমিশন দেয় সেগুলোতে পুশ করা",
-      abroadmate: "আপনার যোগ্যতা ও ক্যারিয়ারের জন্য সেরা বিশ্বখ্যাত সরকারি বিশ্ববিদ্যালয়",
+      parameter: isBn ? "বিশ্ববিদ্যালয় নির্বাচন" : "University Selection",
+      agency: isBn ? "যেসব বেসরকারি কলেজ বেশি কমিশন দেয় সেগুলোতে পুশ করা" : "Pushed toward low-tier colleges offering kickbacks",
+      abroadmate: isBn ? "আপনার যোগ্যতা ও ক্যারিয়ারের জন্য সেরা বিশ্বখ্যাত সরকারি বিশ্ববিদ্যালয়" : "Top accredited public institutions based purely on merit",
       agencyBad: true,
     },
     {
-      parameter: "আবেদনের নিয়ন্ত্রণ ও একাউন্ট",
-      agency: "ইমেইল ও পাসওয়ার্ড গোপন রাখে, শিক্ষার্থী কিছুই দেখতে পারে না",
-      abroadmate: "বিশ্ববিদ্যালয় পোর্টালে সরাসরি আপনার নিজস্ব অ্যাকাউন্ট ও শতভাগ স্বচ্ছতা",
+      parameter: isBn ? "আবেদনের নিয়ন্ত্রণ ও একাউন্ট" : "Account Control & Transparency",
+      agency: isBn ? "ইমেইল ও পাসওয়ার্ড গোপন রাখে, শিক্ষার্থী কিছুই দেখতে পারে না" : "Credentials hidden; correspondence withheld from student",
+      abroadmate: isBn ? "বিশ্ববিদ্যালয় পোর্টালে সরাসরি আপনার নিজস্ব অ্যাকাউন্ট ও শতভাগ স্বচ্ছতা" : "Direct personal ownership of your portal logins & records",
       agencyBad: true,
     },
     {
-      parameter: "ভিসা ও ভর্তির প্রতিশ্রুতি",
-      agency: "১০০% গ্যারান্টির ভুয়া আশ্বাস ও মিথ্যা তথ্য উপস্থাপন",
-      abroadmate: "সংশ্লিষ্ট দেশের দূতাবাস ও অভিবাসন আইনের সত্য ও বাস্তবসম্মত তথ্য",
+      parameter: isBn ? "ভিসা ও ভর্তির প্রতিশ্রুতি" : "Visa Guarantees & Claims",
+      agency: isBn ? "১০০% গ্যারান্টির ভুয়া আশ্বাস ও মিথ্যা তথ্য উপস্থাপন" : "Fake '100% visa guarantees' risking multi-year bans",
+      abroadmate: isBn ? "সংশ্লিষ্ট দেশের দূতাবাস ও অভিবাসন আইনের সত্য ও বাস্তবসম্মত তথ্য" : "Real, documented immigration rules with official links",
       agencyBad: true,
     },
     {
-      parameter: "এসওপি (SOP) লিখন",
-      agency: "কপি-পেস্ট করা জেনেরিক এসওপি যা প্রায়শই রিজেকশনের মূল কারণ হয়",
-      abroadmate: "আপনার নিজস্ব যোগ্যতা ও স্বপ্নের ভিত্তিতে এআই নির্দেশিত ইউনিক এসওপি",
+      parameter: isBn ? "এসওপি (SOP) লিখন" : "Statement of Purpose (SOP)",
+      agency: isBn ? "কপি-পেস্ট করা জেনেরিক এসওপি যা প্রায়শই রিজেকশনের মূল কারণ হয়" : "Recycled templates causing immediate refusal for plagiarism",
+      abroadmate: isBn ? "আপনার নিজস্ব যোগ্যতা ও স্বপ্নের ভিত্তিতে এআই নির্দেশিত ইউনিক এসওপি" : "Authentic, tailored SOP generated from your exact profile",
       agencyBad: true,
     },
   ];
@@ -159,20 +198,31 @@ export default function HowItWorksPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-brand-50/70 via-white to-slate-50 pt-14 pb-20 border-b border-slate-200/80">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#0596690a_1px,transparent_1px),linear-gradient(to_bottom,#0596690a_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-        
+
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-100 border border-brand-200 text-brand-900 text-xs sm:text-sm font-semibold mb-6">
             <Sparkles className="w-4 h-4 text-brand-700" />
-            <span>স্বাবলম্বী উচ্চশিক্ষার বিশ্বস্ত গাইডলাইন</span>
+            <span>{isBn ? "স্বাবলম্বী উচ্চশিক্ষার বিশ্বস্ত গাইডলাইন" : "Independent Study Abroad Guide"}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight leading-tight">
-            কোনো এজেন্সির সাহায্য ছাড়াই <br className="hidden sm:inline" />
-            <span className="text-brand-700">উচ্চশিক্ষার ৪টি সহজ ও নির্ভুল ধাপ</span>
+            {isBn ? (
+              <>
+                কোনো এজেন্সির সাহায্য ছাড়াই <br className="hidden sm:inline" />
+                <span className="text-brand-700">উচ্চশিক্ষার ৪টি সহজ ও নির্ভুল ধাপ</span>
+              </>
+            ) : (
+              <>
+                Navigate Global Admissions in <br className="hidden sm:inline" />
+                <span className="text-brand-700">4 Clear Steps Without Agencies</span>
+              </>
+            )}
           </h1>
 
           <p className="mt-5 text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-            বিদেশের বিশ্ববিদ্যালয়ে আবেদন করা রকেট সায়েন্স নয়। একটু সচেতনতা ও সঠিক নির্দেশিকা থাকলে আপনি নিজেই সম্পূর্ণ আবেদন ও ভিসা প্রক্রিয়া সম্পন্ন করতে পারেন—কোনো মধ্যস্বত্বভোগী দালাল ছাড়া।
+            {isBn
+              ? "বিদেশের বিশ্ববিদ্যালয়ে আবেদন করা রকেট সায়েন্স নয়। একটু সচেতনতা ও সঠিক নির্দেশিকা থাকলে আপনি নিজেই সম্পূর্ণ আবেদন ও ভিসা প্রক্রিয়া সম্পন্ন করতে পারেন—কোনো মধ্যস্বত্বভোগী দালাল ছাড়া।"
+              : "Applying to international universities is straightforward with verified information. Take control of your admission and visa journey completely free."}
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -180,7 +230,7 @@ export default function HowItWorksPage() {
               href="/register"
               className="inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white px-6 py-3.5 rounded-xl font-bold shadow-md shadow-brand-700/25 transition-all hover:-translate-y-0.5"
             >
-              <span>ফ্রি প্রোফাইল শুরু করুন</span>
+              <span>{isBn ? "ফ্রি প্রোফাইল শুরু করুন" : "Start Free Profile"}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -188,7 +238,7 @@ export default function HowItWorksPage() {
               className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 px-6 py-3.5 rounded-xl font-semibold shadow-xs transition-colors"
             >
               <Building className="w-4 h-4 text-brand-700" />
-              <span>বিশ্ববিদ্যালয়সমূহ দেখুন</span>
+              <span>{isBn ? "বিশ্ববিদ্যালয়সমূহ দেখুন" : "Browse Universities"}</span>
             </Link>
           </div>
         </div>
@@ -220,7 +270,7 @@ export default function HowItWorksPage() {
                 </div>
                 <div className="min-w-0">
                   <div className={`text-xs font-semibold ${isSelected ? "text-brand-700" : "text-slate-400"}`}>
-                    ধাপ {s.number}
+                    {isBn ? `ধাপ ${s.number}` : `Step ${s.number}`}
                   </div>
                   <div className={`text-sm font-bold truncate ${isSelected ? "text-slate-900" : "text-slate-700"}`}>
                     {s.title}
@@ -243,7 +293,7 @@ export default function HowItWorksPage() {
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8 pb-8 border-b border-slate-100">
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-brand-700 bg-brand-50 px-3 py-1 rounded-md">
-                    <span>ধাপ নম্বর {s.number}</span>
+                    <span>{isBn ? `ধাপ নম্বর ${s.number}` : `Step Number ${s.number}`}</span>
                     <span>•</span>
                     <span>{s.subtitle}</span>
                   </div>
@@ -257,7 +307,7 @@ export default function HowItWorksPage() {
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 lg:w-72 shrink-0">
                   <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-brand-700" />
-                    <span>এই ধাপের প্রধান প্রাপ্তি:</span>
+                    <span>{isBn ? "এই ধাপের প্রধান প্রাপ্তি:" : "Key Deliverables:"}</span>
                   </div>
                   <ul className="space-y-2">
                     {s.deliverables.map((d, idx) => (
@@ -295,15 +345,17 @@ export default function HowItWorksPage() {
                   disabled={activeStep === 1}
                   className="px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none"
                 >
-                  ← পূর্ববর্তী ধাপ
+                  ← {isBn ? "পূর্ববর্তী ধাপ" : "Previous Step"}
                 </button>
-                <div className="text-xs text-slate-400 font-medium">ধাপ {activeStep} / ৪</div>
+                <div className="text-xs text-slate-400 font-medium">
+                  {isBn ? `ধাপ ${activeStep} / ৪` : `Step ${activeStep} of 4`}
+                </div>
                 {activeStep < 4 ? (
                   <button
                     onClick={() => setActiveStep((prev) => Math.min(4, prev + 1))}
                     className="px-5 py-2 text-sm font-bold rounded-lg bg-brand-700 text-white hover:bg-brand-800 transition-colors inline-flex items-center gap-1.5"
                   >
-                    <span>পরবর্তী ধাপ</span>
+                    <span>{isBn ? "পরবর্তী ধাপ" : "Next Step"}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (
@@ -311,7 +363,7 @@ export default function HowItWorksPage() {
                     href="/register"
                     className="px-5 py-2 text-sm font-bold rounded-lg bg-brand-700 text-white hover:bg-brand-800 transition-colors inline-flex items-center gap-1.5"
                   >
-                    <span>এখনই শুরু করুন</span>
+                    <span>{isBn ? "এখনই শুরু করুন" : "Get Started Now"}</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 )}
@@ -326,13 +378,15 @@ export default function HowItWorksPage() {
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold mb-3">
             <ShieldAlert className="w-4 h-4 text-rose-600" />
-            <span>সচেতনতার চোখ দিয়ে দেখুন</span>
+            <span>{isBn ? "সচেতনতার চোখ দিয়ে দেখুন" : "Fair Comparison"}</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-950">
-            বাণিজ্যিক এজেন্সি বনাম নিজেই AbroadMate
+            {isBn ? "বাণিজ্যিক এজেন্সি বনাম নিজেই AbroadMate" : "Commercial Agency vs. AbroadMate"}
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">
-            কেন হাজার হাজার মেধাবী শিক্ষার্থী এখন মধ্যস্বত্বভোগী এজেন্সি বাদ দিয়ে নিজেই আবেদন করছেন?
+            {isBn
+              ? "কেন হাজার হাজার মেধাবী শিক্ষার্থী এখন মধ্যস্বত্বভোগী এজেন্সি বাদ দিয়ে নিজেই আবেদন করছেন?"
+              : "Why thousands of ambitious students choose direct self-application over agency intermediaries."}
           </p>
         </div>
 
@@ -341,9 +395,13 @@ export default function HowItWorksPage() {
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 text-sm">
-                  <th className="py-4 px-6 font-bold w-1/3">বিষয় / প্যারামিটার</th>
-                  <th className="py-4 px-6 font-bold text-rose-700 w-1/3">প্রচলিত এজেন্সি / কনসালটেন্সি</th>
-                  <th className="py-4 px-6 font-bold text-brand-800 bg-brand-50/60 w-1/3">AbroadMate-এর মাধ্যমে নিজে</th>
+                  <th className="py-4 px-6 font-bold w-1/3">{isBn ? "বিষয় / প্যারামিটার" : "Parameter"}</th>
+                  <th className="py-4 px-6 font-bold text-rose-700 w-1/3">
+                    {isBn ? "প্রচলিত এজেন্সি / কনসালটেন্সি" : "Commercial Agency"}
+                  </th>
+                  <th className="py-4 px-6 font-bold text-brand-800 bg-brand-50/60 w-1/3">
+                    {isBn ? "AbroadMate-এর মাধ্যমে নিজে" : "Independent with AbroadMate"}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
@@ -375,27 +433,31 @@ export default function HowItWorksPage() {
         <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 relative overflow-hidden">
           <div className="relative z-10 max-w-2xl">
             <span className="text-brand-400 font-bold text-xs uppercase tracking-wider block mb-2">
-              ৫টি শীর্ষ গন্তব্য দেশ
+              {isBn ? "৫টি শীর্ষ গন্তব্য দেশ" : "5 Top Destinations"}
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
-              যুক্তরাজ্য, কানাডা, অস্ট্রেলিয়া, জার্মানি ও যুক্তরাষ্ট্রে সরাসরি আবেদন
+              {isBn
+                ? "যুক্তরাজ্য, কানাডা, অস্ট্রেলিয়া, জার্মানি ও যুক্তরাষ্ট্রে সরাসরি আবেদন"
+                : "Direct Guidance for UK, Canada, Australia, Germany & USA"}
             </h2>
             <p className="mt-3 text-slate-300 text-sm sm:text-base leading-relaxed">
-              প্রতিটি দেশের স্টুডেন্ট ভিসা, আইইএলটিএস ছাড়ের নিয়ম, অফিশিয়াল টিউশন ফি এবং স্কলারশিপের আপডেট তথ্য এক ছাতার নিচে।
+              {isBn
+                ? "প্রতিটি দেশের স্টুডেন্ট ভিসা, আইইএলটিএস ছাড়ের নিয়ম, অফিশিয়াল টিউশন ফি এবং স্কলারশিপের আপডেট তথ্য এক ছাতার নিচে।"
+                : "Visa requirements, post-study work rights, verified tuition benchmarks, and official university portals under one roof."}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/universities"
                 className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
               >
-                <span>বিশ্ববিদ্যালয় তালিকা খুঁজুন</span>
+                <span>{isBn ? "বিশ্ববিদ্যালয় তালিকা খুঁজুন" : "Browse Universities"}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors border border-slate-700"
               >
-                <span>ঢাকাস্থ দূতাবাস ও এফএকিউ</span>
+                <span>{isBn ? "ঢাকাস্থ দূতাবাস ও এফএকিউ" : "Dhaka Embassies & FAQs"}</span>
               </Link>
             </div>
           </div>
@@ -408,17 +470,21 @@ export default function HowItWorksPage() {
 
       {/* Final Action Call */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-20 text-center">
-        <h3 className="text-2xl font-bold text-slate-900">আপনার স্বপ্নপূরণের প্রস্তুতি আজই শুরু করুন</h3>
+        <h3 className="text-2xl font-bold text-slate-900">
+          {isBn ? "আপনার স্বপ্নপূরণের প্রস্তুতি আজই শুরু করুন" : "Start Preparing for Your Dream University Today"}
+        </h3>
         <p className="mt-2 text-slate-600 text-sm max-w-lg mx-auto">
-          আপনার প্রোফাইল তৈরি করতে মাত্র ২ মিনিট সময় লাগবে। কোনো টাকা বা ক্রেডিট কার্ডের প্রয়োজন নেই।
+          {isBn
+            ? "আপনার প্রোফাইল তৈরি করতে মাত্র ২ মিনিট সময় লাগবে। কোনো টাকা বা ক্রেডিট কার্ডের প্রয়োজন নেই।"
+            : "Creating your academic profile takes only 2 minutes. Completely free forever."}
         </p>
         <div className="mt-6">
           <Link
             href="/register"
             className="inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white px-8 py-4 rounded-xl font-bold shadow-md shadow-brand-700/25 transition-all hover:-translate-y-0.5 text-base"
           >
-            <span>বিনামূল্যে রেজিস্ট্রেশন করুন</span>
-            <ArrowRight className="w-5 h-5" />
+            <span>{isBn ? "বিনামূল্যে রেজিস্ট্রেশন করুন" : "Create Free Account"}</span>
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>

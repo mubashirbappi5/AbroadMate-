@@ -8,7 +8,8 @@ import { CheckCircle2, AlertTriangle, XCircle, Sparkles, ArrowRight } from "luci
 import Link from "next/link";
 
 export function QuickEligibilityWidget() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const isBn = locale === "bn";
 
   const [country, setCountry] = useState<string>("GB");
   const [degreeLevel, setDegreeLevel] = useState<"bachelor" | "master" | "phd">("master");
@@ -42,7 +43,7 @@ export function QuickEligibilityWidget() {
           </p>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs">
           <form onSubmit={handleCheck} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Country Selector */}
             <div>
@@ -56,7 +57,7 @@ export function QuickEligibilityWidget() {
               >
                 {COUNTRY_LIST.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.flag} {c.nameBn}
+                    {c.flag} {isBn ? c.nameBn : c.nameEn}
                   </option>
                 ))}
               </select>
@@ -72,16 +73,16 @@ export function QuickEligibilityWidget() {
                 onChange={(e) => setDegreeLevel(e.target.value as "bachelor" | "master" | "phd")}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
               >
-                <option value="bachelor">স্নাতক (ব্যাচেলর)</option>
-                <option value="master">স্নাতকোত্তর (মাস্টার্স)</option>
-                <option value="phd">ডক্টরেট (পিএইচডি)</option>
+                <option value="bachelor">{t.eligibility.bachelor}</option>
+                <option value="master">{t.eligibility.master}</option>
+                <option value="phd">{t.eligibility.phd}</option>
               </select>
             </div>
 
             {/* GPA Input */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                {degreeLevel === "bachelor" ? "এইচএসসি জিপিএ (স্কেল ৫.০০)" : "ব্যাচেলর সিজিপিএ (স্কেল ৪.০০)"}
+                {degreeLevel === "bachelor" ? t.eligibility.hscGpa : t.eligibility.bachelorCgpa}
               </label>
               <input
                 type="number"
@@ -97,30 +98,30 @@ export function QuickEligibilityWidget() {
             {/* IELTS Band */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                {t.eligibility.ieltsLabel} (০.০ - ৯.০)
+                {t.eligibility.ieltsLabel} (0.0 - 9.0)
               </label>
               <select
                 value={ielts}
                 onChange={(e) => setIelts(parseFloat(e.target.value))}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-600"
               >
-                <option value="0">এখনও পরীক্ষা দিইনি</option>
-                <option value="5.5">৫.৫ ব্যান্ড</option>
-                <option value="6.0">৬.০ ব্যান্ড</option>
-                <option value="6.5">৬.৫ ব্যান্ড</option>
-                <option value="7.0">৭.০ ব্যান্ড</option>
-                <option value="7.5">৭.৫ ব্যান্ড</option>
-                <option value="8.0">৮.০ ব্যান্ড</option>
+                <option value="0">{t.eligibility.notTakenIelts}</option>
+                <option value="5.5">5.5 {t.eligibility.band}</option>
+                <option value="6.0">6.0 {t.eligibility.band}</option>
+                <option value="6.5">6.5 {t.eligibility.band}</option>
+                <option value="7.0">7.0 {t.eligibility.band}</option>
+                <option value="7.5">7.5 {t.eligibility.band}</option>
+                <option value="8.0">8.0 {t.eligibility.band}</option>
               </select>
             </div>
 
             <div className="sm:col-span-2 lg:col-span-4 mt-2">
               <button
                 type="submit"
-                className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 px-6 rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>যোগ্যতা যাচাই করুন</span>
+                <span>{t.eligibility.checkEligibilityBtn}</span>
               </button>
             </div>
           </form>
@@ -156,31 +157,33 @@ export function QuickEligibilityWidget() {
                         : t.eligibility.resultIneligible}
                     </h4>
                     <span className="text-xs font-semibold opacity-80">
-                      ম্যাচিং স্কোর: {result.scorePercentage}%
+                      {isBn ? `ম্যাচিং স্কোর: ${result.scorePercentage}%` : `Match Score: ${result.scorePercentage}%`}
                     </span>
                   </div>
                 </div>
 
                 <ul className="space-y-1.5 text-xs sm:text-sm pl-7 list-disc">
-                  {result.reasonsBn.map((r, i) => (
+                  {(isBn || !result.reasonsEn?.length ? result.reasonsBn : result.reasonsEn).map((r, i) => (
                     <li key={i}>{r}</li>
                   ))}
-                  {result.recommendationsBn.map((rec, i) => (
+                  {(isBn || !result.recommendationsEn?.length ? result.recommendationsBn : result.recommendationsEn).map((rec, i) => (
                     <li key={i} className="font-semibold text-slate-800">
-                      💡 পরামর্শ: {rec}
+                      💡 {isBn ? "পরামর্শ" : "Recommendation"}: {rec}
                     </li>
                   ))}
                 </ul>
 
                 <div className="mt-4 pt-3 border-t border-current/10 flex items-center justify-between">
                   <span className="text-xs">
-                    সম্পূর্ণ প্রোফাইল দিয়ে детальный যাচাই করতে চান?
+                    {isBn
+                      ? "সম্পূর্ণ প্রোফাইল দিয়ে বিস্তারিত যাচাই করতে চান?"
+                      : "Want to run an in-depth evaluation with your full profile?"}
                   </span>
                   <Link
                     href="/dashboard"
                     className="inline-flex items-center gap-1 text-xs font-bold underline hover:opacity-80"
                   >
-                    <span>প্রোফাইল তৈরি করুন</span>
+                    <span>{isBn ? "প্রোফাইল তৈরি করুন" : "Go to Dashboard"}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
